@@ -11,6 +11,5 @@ extension:
       - middleware
     categories:
       - "integration"
-      - "messaging"
     status: "stable"
     guide: "https://github.com/casualcore/casual-quarkus"
