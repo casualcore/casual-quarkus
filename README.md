@@ -10,7 +10,7 @@ Provides both **inbound** (expose CDI beans as Casual services) and **outbound**
 
 **Gradle:**
 ```groovy
-implementation 'se.laz.casual:casual-quarkus:1.0.1-SNAPSHOT'
+implementation 'se.laz.casual:casual-quarkus:1.0.0
 ```
 
 **Maven:**
@@ -18,7 +18,7 @@ implementation 'se.laz.casual:casual-quarkus:1.0.1-SNAPSHOT'
 <dependency>
     <groupId>se.laz.casual</groupId>
     <artifactId>casual-quarkus</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
