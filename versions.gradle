@@ -1,0 +1,20 @@
+//-*- coding: utf-8-unix -*-
+def netty_version = '4.1.131.Final'
+def quarkus_netty_version = '3.23.0'
+def gson_version = '2.13.1'
+def casual_version = '3.4.1'
+
+ext.libs = [
+    casual_api: "se.laz.casual:casual-api:${casual_version}",
+    casual_api_spi_impl: "se.laz.casual:casual-api-spi-impl:${casual_version}",
+    casual_inbound_api: "se.laz.casual:casual-inbound-api:${casual_version}",
+    casual_inbound: "se.laz.casual:casual-inbound:${casual_version}",
+    casual_inbound_handler_api: "se.laz.casual:casual-inbound-handler-api:${casual_version}",
+    casual_inbound_handler_casual_service: "se.laz.casual:casual-inbound-handler-casual-service:${casual_version}",
+    casual_jca: "se.laz.casual:casual-jca:${casual_version}",
+    casual_network_protocol: "se.laz.casual:casual-network-protocol:${casual_version}",
+    casual_network: "se.laz.casual:casual-network:${casual_version}",
+    casual_internal: "se.laz.casual:casual-internal:${casual_version}",
+    gson: "com.google.code.gson:gson:${gson_version}",
+    commons_io: 'commons-io:commons-io:2.11.0'
+]

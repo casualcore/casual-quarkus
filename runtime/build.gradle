@@ -1,0 +1,64 @@
+//-*- coding: utf-8-unix -*-
+plugins {
+    id 'java-library'
+    id 'io.quarkus.extension'
+    id 'org.kordamp.gradle.jandex'
+    id 'maven-publish'
+}
+
+quarkusExtension {
+    deploymentModule = 'casual-quarkus-deployment'
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    api 'io.quarkus:quarkus-arc'
+    api 'io.quarkiverse.ironjacamar:quarkus-ironjacamar:1.7.2'
+
+    // Casual libraries - api scope for types exposed to consumers
+    api libs.casual_api
+    api libs.casual_inbound_api
+    api libs.casual_inbound_handler_api
+    api libs.casual_jca
+
+    // Implementation-only casual libraries
+    implementation libs.casual_inbound
+    implementation libs.casual_inbound_handler_casual_service
+    implementation libs.casual_network_protocol
+    implementation libs.casual_network
+    implementation libs.casual_internal
+    implementation libs.casual_api_spi_impl
+
+    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
+}
+
+// The Quarkus extension annotation processor locates pom.xml by walking 3 parent
+// directories up from CLASS_OUTPUT. In Gradle that lands at build/classes/ rather
+// than the project root (as in Maven). Generate a minimal pom.xml there so the
+// processor can detect groupId/artifactId and -Werror is preserved.
+tasks.register('generateExtensionPom') {
+    def pomFile = layout.buildDirectory.file('classes/pom.xml')
+    outputs.file(pomFile)
+    doLast {
+        pomFile.get().asFile.text = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>${project.group}</groupId>
+    <artifactId>${project.name}</artifactId>
+    <version>${project.version}</version>
+</project>
+"""
+    }
+}
+tasks.named('compileJava') {
+    dependsOn 'generateExtensionPom'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+}

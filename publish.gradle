@@ -1,0 +1,91 @@
+/*
+ * Copyright (c) 2026, The casual project. All rights reserved.
+ *
+ * This software is licensed under the MIT license, https://opensource.org/licenses/MIT
+ */
+
+//-*- coding: utf-8 -*-
+apply plugin: 'java'
+apply plugin: 'signing'
+apply plugin: 'maven-publish'
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        mavenJava( MavenPublication ) {
+            from components.java
+            versionMapping {
+                usage( 'java-api' ) {
+                    fromResolutionOf( 'runtimeClasspath' )
+                }
+                usage( 'java-runtime' ) {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = 'Casual Quarkus'
+                description = 'Casual Quarkus - Quarkus extension for Casual JCA Resource Adapter for Casual middleware.'
+                url = 'http://casual.laz.se'
+
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:ssh://github.com:casualcore/casual-quarkus.git'
+                    developerConnection = 'scm:git:ssh://github.com:casualcore/casual-quarkus.git'
+                    url = 'https://github.com/casualcore/casual-quarkus'
+                }
+                developers {
+                    developer {
+                        id = 'Aliothe'
+                        name = 'Mathias Creutz'
+                        email = 'mathiascreutz@gmail.com'
+                    }
+                    developer {
+                        id = 'cklellie'
+                        name = 'Chris Kelly'
+                        email = 'christopherjkelly@gmail.com'
+                    }
+                    developer {
+                        id = 'tobiasleo'
+                        name = 'Tobias Leo'
+                        email = 'tobias@tobiasleo.se'
+                    }
+                }
+            }
+
+        }
+    }
+    repositories{
+        maven {
+            def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+            def snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots/"
+            credentials {
+                username = project.hasProperty('mavenCentralTokenUsername') ? mavenCentralTokenUsername : null
+                password = project.hasProperty('mavenCentralTokenPassword') ? mavenCentralTokenPassword : null
+            }
+
+
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+    if(JavaVersion.current().isCompatibleWith( JavaVersion.VERSION_17 )) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+}

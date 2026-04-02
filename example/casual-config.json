@@ -1,0 +1,24 @@
+{
+    "domain": {
+        "name": "quarkus-casual-domain"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "reverseInbound":[
+        {"address": {"host":"10.102.11.181", "port":7780}},
+        {"address": {"host":"10.101.222.187", "port":7780}}
+    ],
+    "inbound": {
+        "useEpoll": true,
+        "startup": {
+            "mode": "immediate"
+        }
+    },
+    "eventServer":{
+        "portNumber": 7698,
+        "useEpoll": true
+    }
+}

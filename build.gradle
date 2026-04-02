@@ -1,0 +1,41 @@
+//-*- coding: utf-8-unix -*-
+
+plugins{
+    id 'maven-publish'
+    id "org.sonarqube" version "7.1.0.6387"
+}
+
+apply from: "$rootProject.projectDir/versions.gradle"
+apply from: "$rootProject.projectDir/publish.gradle"
+
+allprojects {
+    group = 'se.laz.casual'
+    version = '1.0.0'
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        suppressedValidationErrors.add('enforced-platform')
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
+    }
+
+    compileJava {
+        options.encoding = 'UTF-8'
+        options.compilerArgs << '-parameters' << "-Werror"
+    }
+
+    compileTestJava {
+        options.encoding = 'UTF-8'
+    }
+}
+

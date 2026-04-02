@@ -1,0 +1,16 @@
+extension:
+  name: "Casual"
+  description: "Quarkus extension for Casual middleware. Supports outbound JCA calls via IronJacamar and inbound CDI @CasualService beans."
+  metadata:
+    short-name: "casual"
+    keywords:
+      - casual
+      - jca
+      - ironjacamar
+      - resource-adapter
+      - middleware
+    categories:
+      - "integration"
+      - "messaging"
+    status: "preview"
+    guide: "https://github.com/aliothe/casual-quarkus"

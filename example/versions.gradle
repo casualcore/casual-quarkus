@@ -1,0 +1,14 @@
+//-*- coding: utf-8-unix -*-
+def netty_version = '4.1.131.Final'
+def quarkus_netty_version = '3.23.0'
+def gson_version = '2.13.1'
+def casual_version = '3.4.1'
+def casual_quarkus_version = '1.0.0'
+
+ext.libs = [
+    casual_quarkus: "se.laz.casual:casual-quarkus:${casual_quarkus_version}",
+    casual_api: "se.laz.casual:casual-api:${casual_version}",
+    casual_api_spi_impl: "se.laz.casual:casual-api-spi-impl:${casual_version}",
+    gson: "com.google.code.gson:gson:${gson_version}",
+    commons_io: 'commons-io:commons-io:2.11.0'
+]

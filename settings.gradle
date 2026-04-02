@@ -1,0 +1,21 @@
+//-*- coding: utf-8-unix -*-
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal()
+    }
+    plugins {
+        id "${quarkusPluginId}" version "${quarkusPluginVersion}"
+        id 'io.quarkus.extension' version "${quarkusPluginVersion}"
+        id 'org.kordamp.gradle.jandex' version '2.1.0'
+    }
+}
+rootProject.name='casual-quarkus'
+
+include 'runtime'
+include 'deployment'
+
+project(':runtime').name = 'casual-quarkus'
+project(':deployment').name = 'casual-quarkus-deployment'
+

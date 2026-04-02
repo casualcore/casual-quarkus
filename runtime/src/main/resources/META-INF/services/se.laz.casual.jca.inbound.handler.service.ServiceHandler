@@ -1,0 +1,4 @@
+#
+# Quarkus-specific service handler that uses CDI instead of JNDI
+#
+se.laz.casual.quarkus.CasualQuarkusServiceHandler
