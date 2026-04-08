@@ -1,6 +1,4 @@
 //-*- coding: utf-8-unix -*-
-def netty_version = '4.1.131.Final'
-def quarkus_netty_version = '3.23.0'
 def gson_version = '2.13.1'
 def casual_version = '3.4.2'
 
