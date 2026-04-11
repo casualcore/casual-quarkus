@@ -7,10 +7,16 @@ package se.laz.casual.quarkus;
 
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.TransactionState;
+import se.laz.casual.api.service.CasualService;
 import se.laz.casual.api.service.ServiceInfo;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
+import se.laz.casual.jca.inbound.handler.buffer.BufferHandler;
+import se.laz.casual.jca.inbound.handler.buffer.BufferHandlerFactory;
 import se.laz.casual.jca.inbound.handler.service.ServiceHandler;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtensionContext;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtensionFactory;
 import se.laz.casual.network.messages.domain.TransactionType;
 import se.laz.casual.spi.Priority;
 
@@ -82,6 +88,8 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
                     .build();
         }
 
+        ServiceHandlerExtension serviceHandlerExtension = ServiceHandlerExtensionFactory.getExtension(CasualService.class.getName());
+        ServiceHandlerExtensionContext extensionContext = null;
         try
         {
             Object beanInstance = serviceEntry.beanInstance();
@@ -90,30 +98,43 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
             LOG.log(Logger.Level.TRACE,() -> "Calling " + beanInstance.getClass().getSimpleName()
                 + "." + method.getName() + "()");
 
-            Object result = method.invoke(beanInstance, request);
+            BufferHandler bufferHandler = BufferHandlerFactory.getHandler(request.getBuffer().getType());
+            extensionContext = serviceHandlerExtension.before(request, bufferHandler);
+
+            Object[] params = serviceHandlerExtension.convertRequestParams(extensionContext, new Object[]{request});
+            Object result = method.invoke(beanInstance, params);
 
             if (result instanceof InboundResponse inboundResponse)
             {
                 LOG.log(Logger.Level.TRACE, () -> "Service " + serviceName + " completed successfully");
-                return inboundResponse;
+                return serviceHandlerExtension.handleSuccess(extensionContext, inboundResponse);
             }
             else
             {
                 LOG.log(Logger.Level.WARNING, () -> "Service " + serviceName + " did not return InboundResponse, got: "
                     + (result != null ? result.getClass() : "null"));
-                return InboundResponse.createBuilder()
+                InboundResponse response = InboundResponse.createBuilder()
                         .errorState(ErrorState.TPESVCERR)
                         .transactionState(TransactionState.ROLLBACK_ONLY)
                         .build();
+                return serviceHandlerExtension.handleError(extensionContext, request, response, null);
             }
         }
-        catch (Exception e)
+        catch (Throwable e)
         {
             LOG.log(Logger.Level.ERROR, "Error invoking service " + serviceName, e);
-            return InboundResponse.createBuilder()
+            InboundResponse response = InboundResponse.createBuilder()
                     .errorState(ErrorState.TPESVCERR)
                     .transactionState(TransactionState.ROLLBACK_ONLY)
                     .build();
+            return serviceHandlerExtension.handleError(extensionContext, request, response, e);
+        }
+        finally
+        {
+            if (extensionContext != null)
+            {
+                serviceHandlerExtension.after(extensionContext);
+            }
         }
     }
 
