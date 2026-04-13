@@ -24,6 +24,7 @@ dependencies {
     // Implementation-only casual libraries
     implementation libs.casual_inbound
     implementation libs.casual_inbound_handler_casual_service
+    implementation libs.casual_inbound_handler_fielded_buffer
     implementation libs.casual_network_protocol
     implementation libs.casual_network
     implementation libs.casual_internal

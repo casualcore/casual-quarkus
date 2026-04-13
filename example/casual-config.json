@@ -8,14 +8,17 @@
         "useEpoll": true
     },
     "reverseInbound":[
-        {"address": {"host":"10.102.11.181", "port":7780}},
-        {"address": {"host":"10.101.222.187", "port":7780}}
+        {"address": {"host":"10.105.77.46", "port":7780}}
     ],
     "inbound": {
         "useEpoll": true,
         "startup": {
-            "mode": "immediate"
-        }
+            "mode": "discover",
+            "services": [
+                "casual/example/java/echo",
+                "casual/example/java/echoFielded"
+            ]
+        }       
     },
     "eventServer":{
         "portNumber": 7698,

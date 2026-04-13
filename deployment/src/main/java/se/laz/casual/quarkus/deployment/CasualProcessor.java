@@ -16,13 +16,17 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.MethodInfo;
+import se.laz.casual.jca.inbound.handler.buffer.BufferHandler;
 import se.laz.casual.quarkus.CasualServiceDescriptor;
 import se.laz.casual.quarkus.CasualServiceRecorder;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
@@ -31,6 +35,8 @@ class CasualProcessor
     private static final String FEATURE = "casual";
     private static final String GROUP_NAME = "se.laz.casual";
     private static final DotName CASUAL_SERVICE = DotName.createSimple("se.laz.casual.api.service.CasualService");
+    private static final DotName BUFFER_HANDLER_INTERFACE = DotName.createSimple(BufferHandler.class.getName());
+    private static final System.Logger LOG = System.getLogger(CasualProcessor.class.getName());
 
     @BuildStep
     FeatureBuildItem feature()
@@ -43,13 +49,15 @@ class CasualProcessor
     {
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-api"));
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-handler-api"));
+        // need to do this for each BufferHandler implementation that we want to support
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-handler-casual-service"));
+        index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-handler-fielded-buffer"));
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-json-provider-gson"));
         index.produce(new IndexDependencyBuildItem("com.google.code.gson", "gson"));
     }
 
     @BuildStep
-    void registerRuntimeBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans)
+    void registerRuntimeBeans(CombinedIndexBuildItem index, BuildProducer<AdditionalBeanBuildItem> additionalBeans)
     {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
             "se.laz.casual.quarkus.CasualQuarkusResourceAdapterFactory"));
@@ -57,6 +65,13 @@ class CasualProcessor
             "se.laz.casual.quarkus.CasualQuarkusServiceRegistry"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
             "se.laz.casual.quarkus.CasualMessageEndpoint"));
+        for (ClassInfo info : index.getIndex().getAllKnownImplementations(BUFFER_HANDLER_INTERFACE))
+        {
+            // We register them as unremovable beans so SPI/ServiceLoader can find them
+            // and CDI can potentially inject into them.
+            additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(info.name().toString()));
+            LOG.log(System.Logger.Level.INFO, () -> "Registered BufferHandler implementation as unremovable bean: " + info.name());
+        }
     }
 
     @BuildStep
@@ -74,7 +89,11 @@ class CasualProcessor
             AnnotationValue categoryValue = annotation.value("category");
             String category = categoryValue != null ? categoryValue.asString() : "";
             unremovableBeans.produce(UnremovableBeanBuildItem.beanClassNames(className));
-            casualServices.produce(new CasualServiceBuildItem(serviceName, className, methodName, category));
+            MethodInfo method = annotation.target().asMethod();
+            List<String> params = method.parameters().stream()
+                                        .map(p -> p.type().name().toString())
+                                        .collect(Collectors.toList());
+            casualServices.produce(new CasualServiceBuildItem(serviceName, className, methodName, category, params));
         }
     }
 
@@ -91,7 +110,8 @@ class CasualProcessor
                     item.getServiceName(),
                     item.getClassName(),
                     item.getMethodName(),
-                    item.getCategory()));
+                    item.getCategory(),
+                    item.getParameterTypes()));
         }
         recorder.registerServices(beanContainer.getValue(), descriptors);
     }
