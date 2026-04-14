@@ -1,0 +1,19 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    // comment out this to see that it then does not use the handlers provided here
+    implementation project(':user-handlers')
+    implementation 'io.quarkus:quarkus-rest'
+    // you should run ../gradlew clean build publishToMavenLocal first
+    implementation libs.casual_quarkus
+    implementation libs.commons_io
+
+    runtimeOnly libs.gson
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+}

@@ -10,3 +10,6 @@ pluginManagement {
     }
 }
 rootProject.name='casual-quarkus-example'
+
+include 'example-app'
+include 'user-handlers'

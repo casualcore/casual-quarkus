@@ -1,14 +1,9 @@
 //-*- coding: utf-8-unix -*-
-plugins {
-    id 'java'
-    id 'io.quarkus'
-}
-
 apply from: "$rootProject.projectDir/versions.gradle"
 
 allprojects {
     group = 'se.laz.casual'
-    version = '1.0.0-SNAPSHOT'
+    version = '1.0.0'
 
     repositories {
         mavenCentral()
@@ -24,18 +19,4 @@ allprojects {
     tasks.withType(GenerateModuleMetadata).configureEach {
         suppressedValidationErrors.add('enforced-platform')
     }
-}
-
-
-dependencies {
-    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-    implementation 'io.quarkus:quarkus-rest'
-    // you should run ../gradlew clean build publishToMavenLocal first
-    implementation libs.casual_quarkus
-    implementation libs.commons_io
-
-    runtimeOnly libs.gson
-
-    testImplementation 'io.quarkus:quarkus-junit5'
-    testImplementation 'io.rest-assured:rest-assured'
 }

@@ -9,6 +9,7 @@ ext.libs = [
     casual_inbound: "se.laz.casual:casual-inbound:${casual_version}",
     casual_inbound_handler_api: "se.laz.casual:casual-inbound-handler-api:${casual_version}",
     casual_inbound_handler_casual_service: "se.laz.casual:casual-inbound-handler-casual-service:${casual_version}",
+    casual_inbound_handler_fielded_buffer: "se.laz.casual:casual-inbound-handler-fielded-buffer:${casual_version}",
     casual_jca: "se.laz.casual:casual-jca:${casual_version}",
     casual_network_protocol: "se.laz.casual:casual-network-protocol:${casual_version}",
     casual_network: "se.laz.casual:casual-network:${casual_version}",

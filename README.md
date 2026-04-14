@@ -126,10 +126,13 @@ quarkus.ironjacamar.other-pool.ra.config.port=7771
 
 The [`example/`](example/) directory contains a standalone Quarkus application that demonstrates:
 
-- **Inbound services** -- `EchoServiceImpl` and `ReverseServiceImpl` exposed as Casual services via `@CasualService`
+- **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, and `FieldedServiceImpl` exposed as Casual services via `@CasualService`
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
 - **Multiple outbound pools** -- two RA configurations showing named pool setup
 - **Virtual threads** -- enabled for non-blocking service handling
+- **casual config file** -- showing basic usage, including reverse inbound. See [https://github.com/casualcore/casual-java](casual-java) for documentation
+- **example fielded file** -- used in the fielded test service
+- **user defined handlers** -- showing how a user application can implement their own ServiceHandler, BufferHandler and ServiceHandlerExtension
 
 The example app consumes the extension from Maven Local. Build and install the extension first:
 
@@ -141,7 +144,17 @@ Then build and run the example:
 
 ```bash
 cd example
-CASUAL_CONFIG_FILE=./casual-config.json ./gradlew quarkusDev
+CASUAL_FIELD_TABLE=./casual-fields.json CASUAL_CONFIG_FILE=./casual-config.json ./gradlew quarkusDev
+```
+
+or
+```bash
+CASUAL_CONFIG_FILE=./casual-config.json CASUAL_FIELD_TABLE=./casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
+```
+
+Example call towards fielded service, via casual:
+```bash
+curl -v 'localhost:8080/casual/simpleObject?id=42&name=bob'
 ```
 
 ## Architecture
@@ -174,10 +187,8 @@ The processor also handles `@Identifier` annotation transformation on the messag
 Casual client
   -> inbound server (port 7772)
   -> CasualMessageEndpoint
-  -> ServiceHandlerFactory (SPI)
   -> CasualQuarkusServiceHandler (LEVEL_3, preferred)
-  -> CasualQuarkusServiceRegistry.getService()
-  -> bean.method(InboundRequest) via reflection
+  -> service method
   -> InboundResponse back to client
 ```
 

@@ -7,15 +7,24 @@ package se.laz.casual.quarkus;
 
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.TransactionState;
+import se.laz.casual.api.service.CasualService;
 import se.laz.casual.api.service.ServiceInfo;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
+import se.laz.casual.jca.inbound.handler.buffer.BufferHandler;
+import se.laz.casual.jca.inbound.handler.buffer.BufferHandlerFactory;
+import se.laz.casual.jca.inbound.handler.buffer.InboundRequestInfo;
+import se.laz.casual.jca.inbound.handler.buffer.ServiceCallInfo;
 import se.laz.casual.jca.inbound.handler.service.ServiceHandler;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtensionContext;
+import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtensionFactory;
 import se.laz.casual.network.messages.domain.TransactionType;
 import se.laz.casual.spi.Priority;
 
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
 /**
  * Quarkus-specific service handler that uses CDI beans instead of JNDI lookups.
@@ -26,6 +35,7 @@ import java.lang.reflect.Method;
  */
 public class CasualQuarkusServiceHandler implements ServiceHandler
 {
+    private interface CasualMarkerInterface {}
     private static final Logger LOG = System.getLogger(CasualQuarkusServiceHandler.class.getName());
 
     /**
@@ -35,7 +45,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public Priority getPriority()
     {
-        return Priority.LEVEL_3;
+        return Priority.LEVEL_4;
     }
 
     @Override
@@ -82,6 +92,8 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
                     .build();
         }
 
+        ServiceHandlerExtension serviceHandlerExtension = ServiceHandlerExtensionFactory.getExtension(CasualService.class.getName());
+        ServiceHandlerExtensionContext extensionContext = null;
         try
         {
             Object beanInstance = serviceEntry.beanInstance();
@@ -90,30 +102,41 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
             LOG.log(Logger.Level.TRACE,() -> "Calling " + beanInstance.getClass().getSimpleName()
                 + "." + method.getName() + "()");
 
-            Object result = method.invoke(beanInstance, request);
+            BufferHandler bufferHandler = BufferHandlerFactory.getHandler(request.getBuffer().getType());
+            extensionContext = serviceHandlerExtension.before(request, bufferHandler);
 
-            if (result instanceof InboundResponse inboundResponse)
-            {
-                LOG.log(Logger.Level.TRACE, () -> "Service " + serviceName + " completed successfully");
-                return inboundResponse;
-            }
-            else
-            {
-                LOG.log(Logger.Level.WARNING, () -> "Service " + serviceName + " did not return InboundResponse, got: "
-                    + (result != null ? result.getClass() : "null"));
-                return InboundResponse.createBuilder()
-                        .errorState(ErrorState.TPESVCERR)
-                        .transactionState(TransactionState.ROLLBACK_ONLY)
-                        .build();
-            }
+            Proxy dummyProxy = (Proxy) Proxy.newProxyInstance(
+                    Thread.currentThread().getContextClassLoader(),
+                    new Class<?>[]{CasualMarkerInterface.class},
+                    (proxy, m, args) -> null
+            );
+
+            InboundRequestInfo requestInfo = InboundRequestInfo.createBuilder()
+                                                               .withProxy(dummyProxy)
+                                                               .withProxyMethod(method)
+                                                               .withRealMethod(method)
+                                                               .withServiceName(serviceName)
+                                                               .build();
+            ServiceCallInfo info = bufferHandler.fromRequest(requestInfo, request);
+            Object[] params = serviceHandlerExtension.convertRequestParams(extensionContext, info.getParams());
+            Object result = method.invoke(beanInstance, params);
+            return serviceHandlerExtension.handleSuccess( extensionContext, bufferHandler.toResponse( info, result ));
         }
-        catch (Exception e)
+        catch (Throwable e)
         {
             LOG.log(Logger.Level.ERROR, "Error invoking service " + serviceName, e);
-            return InboundResponse.createBuilder()
+            InboundResponse response = InboundResponse.createBuilder()
                     .errorState(ErrorState.TPESVCERR)
                     .transactionState(TransactionState.ROLLBACK_ONLY)
                     .build();
+            return serviceHandlerExtension.handleError(extensionContext, request, response, e);
+        }
+        finally
+        {
+            if (extensionContext != null)
+            {
+                serviceHandlerExtension.after(extensionContext);
+            }
         }
     }
 
