@@ -120,15 +120,14 @@ public class CasualResource
 
     private CasualBuffer createBuffer(byte[] data, CasualBufferType bufferType)
     {
-        switch(bufferType)
+        return switch(bufferType)
         {
             case X_OCTET -> OctetBuffer.of(data);
             case JSON -> JsonBuffer.of(new String(data, StandardCharsets.UTF_8));
             case CSTRING -> CStringBuffer.of(new String(data, StandardCharsets.UTF_8));
             case FIELDED -> FieldedTypeBuffer.create(List.of(data));
-            case JSON_JSCD -> throw new CasualRuntimeException("no JSON JSCD buffer type available, no bueno");
-        }
-        throw new CasualRuntimeException("unknown bufer type" + bufferType);
+            case JSON_JSCD -> throw new CasualRuntimeException("no JSON JSCD buffer type available");
+        };
     }
 
     private CompletionStage<CasualBuffer> makeServiceCallAsync(String serviceName, CasualBuffer buffer, Flag<AtmiFlags> flags)

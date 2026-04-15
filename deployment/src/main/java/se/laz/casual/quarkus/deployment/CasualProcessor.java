@@ -71,11 +71,12 @@ class CasualProcessor
     void registerSpiImplementations(CombinedIndexBuildItem index, BuildProducer<AdditionalBeanBuildItem> additionalBeans,
                                     BuildProducer<ReflectiveClassBuildItem> reflectiveClasses)
     {
-
         List<DotName> interfaces = List.of(
                 DotName.createSimple("se.laz.casual.jca.inbound.handler.buffer.BufferHandler"),
                 DotName.createSimple("se.laz.casual.jca.inbound.handler.service.ServiceHandler"),
-                DotName.createSimple("se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension")
+                DotName.createSimple("se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension"),
+                DotName.createSimple("se.laz.casual.api.external.json.JsonProvider"),
+                DotName.createSimple("se.laz.casual.api.buffer.type.fielded.marshalling.FieldedMarshaller")
         );
 
         for (DotName interfaceName : interfaces)
