@@ -28,7 +28,6 @@ import se.laz.casual.api.buffer.type.JsonBuffer;
 import se.laz.casual.api.buffer.type.OctetBuffer;
 import se.laz.casual.api.buffer.type.ServiceBuffer;
 import se.laz.casual.api.buffer.type.fielded.FieldedTypeBuffer;
-import se.laz.casual.api.buffer.type.fielded.FieldedTypeBufferEncoder;
 import se.laz.casual.api.buffer.type.fielded.marshalling.FieldedTypeBufferProcessor;
 import se.laz.casual.api.flags.AtmiFlags;
 import se.laz.casual.api.flags.Flag;
@@ -41,16 +40,13 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Path("/casual")
 public class CasualResource
 {
-    private AtomicInteger casualSwitch = new AtomicInteger(0);
     @Inject
     @Identifier("casual")
     private CasualConnectionFactory casualOne;
