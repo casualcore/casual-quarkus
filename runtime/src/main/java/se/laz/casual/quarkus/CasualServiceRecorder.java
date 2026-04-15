@@ -7,11 +7,13 @@ package se.laz.casual.quarkus;
 
 import io.quarkus.arc.runtime.BeanContainer;
 import io.quarkus.runtime.annotations.Recorder;
-import se.laz.casual.jca.inbound.handler.InboundRequest;
 
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.List;
+
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.INFO;
 
 /**
  * Uses the services found at build time to register in the CasualQuarkusServiceRegistry
@@ -25,9 +27,11 @@ public class CasualServiceRecorder
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         CasualQuarkusServiceRegistry registry = beanContainer.beanInstance(CasualQuarkusServiceRegistry.class);
         int registered = 0;
-        LOG.log(Logger.Level.INFO, () -> "=== Casual Quarkus Service Registration: Starting ===");
-        for (CasualServiceDescriptor descriptor : descriptors) {
-            try {
+        LOG.log(INFO, () -> "=== Casual Quarkus Service Registration: Starting ===");
+        for (CasualServiceDescriptor descriptor : descriptors)
+        {
+            try
+            {
                 Class<?> beanClass = cl.loadClass(descriptor.className());
                 Object beanInstance = beanContainer.beanInstance(beanClass);
 
@@ -46,14 +50,16 @@ public class CasualServiceRecorder
                         method
                 );
                 registered++;
-                LOG.log(Logger.Level.INFO, () -> "Registered service: " + descriptor.serviceName()
+                LOG.log(INFO, () -> "Registered service: " + descriptor.serviceName()
                         + " -> " + descriptor.className() + "." + descriptor.methodName() + "()");
             }
             catch (Exception e)
             {
-                LOG.log(Logger.Level.ERROR, "Failed to register: " + descriptor.serviceName(), e);
+                LOG.log(ERROR, "Failed to register: " + descriptor.serviceName(), e);
             }
         }
+        final int numberOfRegisteredServices = registered;
+        LOG.log(INFO, () -> "Number of registered services: " + numberOfRegisteredServices);
     }
 
     private Class<?> loadClass(ClassLoader cl, String name) throws ClassNotFoundException

@@ -122,7 +122,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
             Object result = method.invoke(beanInstance, params);
             return serviceHandlerExtension.handleSuccess( extensionContext, bufferHandler.toResponse( info, result ));
         }
-        catch (Throwable e)
+        catch (Exception e)
         {
             LOG.log(Logger.Level.ERROR, "Error invoking service " + serviceName, e);
             InboundResponse response = InboundResponse.createBuilder()

@@ -27,7 +27,6 @@ import se.laz.casual.quarkus.CasualServiceRecorder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
@@ -83,7 +82,7 @@ class CasualProcessor
         {
             // find everything implementing the interface in the entire application
             // this means it also works for implementations in the user application
-            for (ClassInfo implementation : index.getIndex().getAllKnownImplementors(interfaceName))
+            for (ClassInfo implementation : index.getIndex().getAllKnownImplementations(interfaceName))
             {
                 String className = implementation.name().toString();
 
@@ -121,7 +120,7 @@ class CasualProcessor
             MethodInfo method = annotation.target().asMethod();
             List<String> params = method.parameters().stream()
                                         .map(p -> p.type().name().toString())
-                                        .collect(Collectors.toList());
+                                        .toList();
             casualServices.produce(new CasualServiceBuildItem(serviceName, className, methodName, category, params));
         }
     }
