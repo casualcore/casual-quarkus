@@ -49,12 +49,7 @@ public class CasualResource
 {
     @Inject
     @Identifier("casual")
-    private CasualConnectionFactory casualOne;
-
-    // Not used in this example, just showing that you can have n number of connection factories configured
-    @Inject
-    @Identifier("casual-two")
-    private CasualConnectionFactory casualTwo;
+    CasualConnectionFactory casualOne;
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
@@ -98,7 +93,7 @@ public class CasualResource
         SimpleObject simpleObject = new SimpleObject(id, name);
         CasualBuffer buffer = FieldedTypeBufferProcessor.marshall(simpleObject);
         return Uni.createFrom().completionStage(
-                          () -> makeServiceCallAsync("casual/example/java/echoFielded", buffer, flags)
+                          () -> makeServiceCallAsync("echoFielded", buffer, flags)
                   )
                   .map(value -> {
                       ServiceBuffer serviceBuffer = (ServiceBuffer) value;
@@ -130,7 +125,7 @@ public class CasualResource
     {
         try
         {
-            try (CasualConnection connection = getConnectionFactory().getConnection())
+            try (CasualConnection connection = casualOne.getConnection())
             {
                 return connection.tpacall(serviceName, buffer, flags)
                                  .thenApply(replyOpt -> {
@@ -165,11 +160,6 @@ public class CasualResource
         return Response.serverError()
                        .entity(sw.toString())
                        .build();
-    }
-
-    private CasualConnectionFactory getConnectionFactory()
-    {
-        return casualTwo;
     }
 
 }

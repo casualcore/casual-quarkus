@@ -23,11 +23,14 @@ public class CasualServiceRecorder
 {
     private static final Logger LOG = System.getLogger(CasualServiceRecorder.class.getName());
 
-    public void registerServices(BeanContainer beanContainer, List<CasualServiceDescriptor> descriptors) {
+    public void registerServices(BeanContainer beanContainer, List<CasualServiceDescriptor> descriptors)
+    {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         CasualQuarkusServiceRegistry registry = beanContainer.beanInstance(CasualQuarkusServiceRegistry.class);
+
+        LOG.log(INFO, "=== Casual Quarkus Service Registration: Starting ===");
         int registered = 0;
-        LOG.log(INFO, () -> "=== Casual Quarkus Service Registration: Starting ===");
+
         for (CasualServiceDescriptor descriptor : descriptors)
         {
             try
@@ -35,9 +38,15 @@ public class CasualServiceRecorder
                 Class<?> beanClass = cl.loadClass(descriptor.className());
                 Object beanInstance = beanContainer.beanInstance(beanClass);
 
-                // Load each parameter class to get the exact Method handle
+                if (beanInstance == null)
+                {
+                    throw new RuntimeException("CDI Bean not found for class: " + descriptor.className());
+                }
+
+                // Resolve parameter types
                 Class<?>[] paramTypes = new Class[descriptor.parameterTypes().size()];
-                for (int i = 0; i < descriptor.parameterTypes().size(); i++) {
+                for (int i = 0; i < descriptor.parameterTypes().size(); i++)
+                {
                     paramTypes[i] = loadClass(cl, descriptor.parameterTypes().get(i));
                 }
 
@@ -49,42 +58,39 @@ public class CasualServiceRecorder
                         beanInstance,
                         method
                 );
+
                 registered++;
-                LOG.log(INFO, () -> "Registered service: " + descriptor.serviceName()
-                        + " -> " + descriptor.className() + "." + descriptor.methodName() + "()");
+                LOG.log(INFO, "Registered: {0} -> {1}.{2}()",
+                        descriptor.serviceName(), descriptor.className(), descriptor.methodName());
+
             }
             catch (Exception e)
             {
-                LOG.log(ERROR, "Failed to register: " + descriptor.serviceName(), e);
+                LOG.log(ERROR, "Failed to register Casual service: " + descriptor.serviceName(), e);
             }
         }
-        final int numberOfRegisteredServices = registered;
-        LOG.log(INFO, () -> "Number of registered services: " + numberOfRegisteredServices);
+        LOG.log(INFO, "Successfully registered {0} services", registered);
     }
 
     private Class<?> loadClass(ClassLoader cl, String name) throws ClassNotFoundException
     {
-        return switch (name)
-        {
-            // Primitives
-            case "byte"    -> byte.class;
-            case "int"     -> int.class;
-            case "long"    -> long.class;
-            case "double"  -> double.class;
+        return switch (name) {
+            case "byte" -> byte.class;
+            case "short" -> short.class;
+            case "int" -> int.class;
+            case "long" -> long.class;
+            case "float" -> float.class;
+            case "double" -> double.class;
             case "boolean" -> boolean.class;
-            case "char"    -> char.class;
-            case "float"   -> float.class;
-            case "short"   -> short.class;
-            case "void"    -> void.class;
-
-            // Common Primitive Arrays
-            case "byte[]", "[B" -> byte[].class;
-            case "int[]",  "[I" -> int[].class;
-
-            // Fallback for objects and object arrays
+            case "char" -> char.class;
+            case "void" -> void.class;
             default -> {
+                // Check if it's already an internal JVM descriptor like [Ljava.lang.String;
+                if (name.startsWith("[")) {
+                    yield Class.forName(name, false, cl);
+                }
+                // Handle human-readable array syntax "com.foo.Bar[]"
                 if (name.endsWith("[]")) {
-                    // Convert "com.foo.Bar[]" to "[Lcom.foo.Bar;" for Class.forName
                     String elementClassName = name.substring(0, name.length() - 2);
                     Class<?> elementClass = loadClass(cl, elementClassName);
                     yield java.lang.reflect.Array.newInstance(elementClass, 0).getClass();

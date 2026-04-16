@@ -1,6 +1,6 @@
 {
     "domain": {
-        "name": "quarkus-casual-domain-one"
+        "name": "quarkus-casual-domain-two"
     },
     "unmanaged": true,
     "outbound":{
@@ -19,7 +19,7 @@
         }       
     },
     "eventServer":{
-        "portNumber": 7698,
+        "portNumber": 7896,
         "useEpoll": true
     }
 }

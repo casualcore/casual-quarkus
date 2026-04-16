@@ -16,7 +16,7 @@ import se.laz.casual.jca.inbound.handler.InboundResponse;
 @ApplicationScoped
 public class FieldedServiceImpl implements FieldedService
 {
-    @CasualService(name = "casual/example/java/echoFielded", category = "example")
+    @CasualService(name = "echoFielded", category = "example")
     @Override
     public SimpleObject echoFielded(SimpleObject data)
     {

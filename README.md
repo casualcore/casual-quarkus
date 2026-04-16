@@ -45,7 +45,7 @@ public class MyService {
 
 Services are discovered at **build time** via Jandex and registered during runtime init through a Quarkus recorder -- no runtime classpath scanning.
 
-### Configure the resource adapter
+### Configure the resource adapter in your user application
 
 In `application.properties`:
 
@@ -70,12 +70,8 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
     },
     "unmanaged": true,
     "outbound":{
-        "unmanaged": true,
         "useEpoll": true
     },
-    "reverseInbound":[
-        {"address": {"host":"10.102.11.181", "port":7780}}
-    ],
     "inbound": {
         "useEpoll": true,
         "startup": {
@@ -104,7 +100,8 @@ public ServiceReturn<CasualBuffer> callService(String serviceName, CasualBuffer 
     }
 }
 ```
-This is a very simple example, please see the example application for a more complete example.
+This is a very simple example, please see the example application for a more complete example which is heaviliy async and thus also makes use
+of ```tpacall``` instead of tpcall.
 
 
 ### Multiple outbound pools
@@ -128,7 +125,7 @@ The [`example/`](example/) directory contains a standalone Quarkus application t
 
 - **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, and `FieldedServiceImpl` exposed as Casual services via `@CasualService`
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
-- **Multiple outbound pools** -- two RA configurations showing named pool setup
+- **A single outbound pool** -- one outbound pool configuration showing named pool setup
 - **Virtual threads** -- enabled for non-blocking service handling
 - **casual config file** -- showing basic usage, including reverse inbound. See [https://github.com/casualcore/casual-java](casual-java) for documentation
 - **example fielded file** -- used in the fielded test service
@@ -137,25 +134,46 @@ The [`example/`](example/) directory contains a standalone Quarkus application t
 The example app consumes the extension from Maven Local. Build and install the extension first:
 
 ```bash
-./gradlew publishToMavenLocal
+./gradlew clean build publishToMavenLocal
 ```
 
 Then build and run the example:
 
 ```bash
 cd example
-CASUAL_FIELD_TABLE=./casual-fields.json CASUAL_CONFIG_FILE=./casual-config.json ./gradlew quarkusDev
+CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev ./gradlew quarkusDev
 ```
 
-or
+or ( if you build a fat jar and want to test that)
 ```bash
-CASUAL_CONFIG_FILE=./casual-config.json CASUAL_FIELD_TABLE=./casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
+CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
 ```
 
-Example call towards fielded service, via casual:
-```bash
-curl -v 'localhost:8080/casual/simpleObject?id=42&name=bob'
+To run the examples with no casual, you can start two instances of the casual quarkus example-app such as:
+```sh
+CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev
 ```
+
+and
+
+```sh
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev
+```
+
+You can then test, for instance the fielded service, as such:
+```sh
+$curl 'localhost:8080/casual/simpleObject?id=42&name=bob'
+SimpleObject{id=42, name='bob'}
+```
+
+Or to test the echo service:
+```sh
+$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/casual%2fexample%2fjava%2fecho
+Bazinga!
+```
+
+Note that the example application with the ```peer``` profile is exposing port 8000 instead of 8080.
+
 
 ## Architecture
 
@@ -167,8 +185,6 @@ quarkus-casual-deployment/  (deployment module)
 ### Build-time (deployment module)
 
 `CasualProcessor` uses Jandex to discover `@CasualService` annotations and produces `CasualServiceBuildItem`s. A `@Record(RUNTIME_INIT)` build step converts these into `CasualServiceDescriptor`s and calls `CasualServiceRecorder.registerServices()`, which resolves CDI bean instances and registers them in `CasualQuarkusServiceRegistry`.
-
-The processor also handles `@Identifier` annotation transformation on the message endpoint to match the configured RA identifier.
 
 ### Runtime
 
@@ -185,23 +201,23 @@ The processor also handles `@Identifier` annotation transformation on the messag
 
 ```
 Casual client
-  -> inbound server (port 7772)
+  -> inbound server
   -> CasualMessageEndpoint
   -> CasualQuarkusServiceHandler (LEVEL_3, preferred)
   -> service method
   -> InboundResponse back to client
 ```
 
-## Building
+## Building the extension
 
 ```bash
-./gradlew build
+./gradlew clean build
 ```
 
 Install to Maven Local for consumption by application projects:
 
 ```bash
-./gradlew publishToMavenLocal
+./gradlew clean build publishToMavenLocal
 ```
 
 Requires Java 25+.
