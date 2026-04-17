@@ -7,6 +7,7 @@ package se.laz.casual.quarkus;
 
 import io.quarkus.arc.runtime.BeanContainer;
 import io.quarkus.runtime.annotations.Recorder;
+import se.laz.casual.api.CasualRuntimeException;
 
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
@@ -40,7 +41,7 @@ public class CasualServiceRecorder
 
                 if (beanInstance == null)
                 {
-                    throw new RuntimeException("CDI Bean not found for class: " + descriptor.className());
+                    throw new CasualRuntimeException("CDI Bean not found for class: " + descriptor.className());
                 }
 
                 // Resolve parameter types
@@ -64,7 +65,7 @@ public class CasualServiceRecorder
                         descriptor.serviceName(), descriptor.className(), descriptor.methodName());
 
             }
-            catch (Exception e)
+            catch (Throwable e)
             {
                 LOG.log(ERROR, "Failed to register Casual service: " + descriptor.serviceName(), e);
             }
@@ -86,11 +87,13 @@ public class CasualServiceRecorder
             case "void" -> void.class;
             default -> {
                 // Check if it's already an internal JVM descriptor like [Ljava.lang.String;
-                if (name.startsWith("[")) {
+                if (name.startsWith("["))
+                {
                     yield Class.forName(name, false, cl);
                 }
                 // Handle human-readable array syntax "com.foo.Bar[]"
-                if (name.endsWith("[]")) {
+                if (name.endsWith("[]"))
+                {
                     String elementClassName = name.substring(0, name.length() - 2);
                     Class<?> elementClass = loadClass(cl, elementClassName);
                     yield java.lang.reflect.Array.newInstance(elementClass, 0).getClass();

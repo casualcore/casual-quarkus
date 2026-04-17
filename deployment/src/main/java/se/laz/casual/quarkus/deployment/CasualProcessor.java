@@ -46,6 +46,7 @@ class CasualProcessor
     @BuildStep
     void indexCasualDependencies(BuildProducer<IndexDependencyBuildItem> index)
     {
+        // for jandex
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-api"));
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-handler-api"));
         // need to do this for each BufferHandler implementation that we want to support out of the box
@@ -82,20 +83,16 @@ class CasualProcessor
         {
             // find everything implementing the interface in the entire application
             // this means it also works for implementations in the user application
+            // except when they run via quarkusDev
             for (ClassInfo implementation : index.getIndex().getAllKnownImplementations(interfaceName))
             {
                 String className = implementation.name().toString();
-
                 // make it a CDI bean and prevent pruning
                 additionalBeans.produce(AdditionalBeanBuildItem.builder()
                                                                .addBeanClass(className)
                                                                .setUnremovable()
                                                                .setDefaultScope(BuiltinScope.APPLICATION.getName())
                                                                .build());
-
-                // for SPI: Register for reflection so ServiceLoader works in Native Mode
-                reflectiveClasses.produce(ReflectiveClassBuildItem.builder(className)
-                                                                  .methods().fields().build());
                 LOG.log(System.Logger.Level.INFO, () -> "Registered implementation for reflection and unremovable bean: " + implementation.name());
             }
         }
