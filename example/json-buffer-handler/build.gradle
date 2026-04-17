@@ -1,13 +1,16 @@
+//-*- coding: utf-8-unix -*-
 plugins {
     id 'java'
     id 'io.quarkus'
+    // needed to create jandex index
+    // used for SPI
+    id 'org.kordamp.gradle.jandex' version '2.0.0'
 }
 
 dependencies {
+    compileOnly libs.casual_api
+    compileOnly libs.casual_inbound_handler_fielded_buffer
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-    implementation project(':json-buffer-handler')
-    // comment out this to see that it then does not use the handlers provided here
-    implementation project(':user-handlers')
     implementation 'io.quarkus:quarkus-rest'
     // you should run ../gradlew clean build publishToMavenLocal first
     implementation libs.casual_quarkus
@@ -18,7 +21,3 @@ dependencies {
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
 }
-
-
-
-
