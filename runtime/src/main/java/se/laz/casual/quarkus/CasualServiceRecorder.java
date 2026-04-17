@@ -26,7 +26,7 @@ public class CasualServiceRecorder
 
     public void registerServices(BeanContainer beanContainer, List<CasualServiceDescriptor> descriptors)
     {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
         CasualQuarkusServiceRegistry registry = beanContainer.beanInstance(CasualQuarkusServiceRegistry.class);
 
         LOG.log(INFO, "=== Casual Quarkus Service Registration: Starting ===");
@@ -36,7 +36,7 @@ public class CasualServiceRecorder
         {
             try
             {
-                Class<?> beanClass = cl.loadClass(descriptor.className());
+                Class<?> beanClass = contextClassLoader.loadClass(descriptor.className());
                 Object beanInstance = beanContainer.beanInstance(beanClass);
 
                 if (beanInstance == null)
@@ -48,7 +48,7 @@ public class CasualServiceRecorder
                 Class<?>[] paramTypes = new Class[descriptor.parameterTypes().size()];
                 for (int i = 0; i < descriptor.parameterTypes().size(); i++)
                 {
-                    paramTypes[i] = CasualTypeResolver.loadClass(cl, descriptor.parameterTypes().get(i));
+                    paramTypes[i] = CasualTypeResolver.loadClass(contextClassLoader, descriptor.parameterTypes().get(i));
                 }
 
                 Method method = beanClass.getMethod(descriptor.methodName(), paramTypes);
