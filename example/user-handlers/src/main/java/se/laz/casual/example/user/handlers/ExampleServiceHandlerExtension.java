@@ -5,7 +5,6 @@
  */
 package se.laz.casual.example.user.handlers;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import se.laz.casual.api.service.CasualService;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
@@ -18,7 +17,6 @@ import java.lang.System.Logger;
 
 import static java.lang.System.Logger.Level.INFO;
 
-@ApplicationScoped
 public class ExampleServiceHandlerExtension implements ServiceHandlerExtension
 {
     private static final Logger LOG = System.getLogger(ExampleServiceHandlerExtension.class.getName());

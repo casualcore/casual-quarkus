@@ -5,7 +5,6 @@
  */
 package se.laz.casual.example.user.handlers;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
 import se.laz.casual.jca.inbound.handler.buffer.BufferHandler;
@@ -16,7 +15,6 @@ import se.laz.casual.spi.Priority;
 
 import static java.lang.System.Logger.Level.INFO;
 
-@ApplicationScoped
 public class ExampleFieldedBufferHandler implements BufferHandler
 {
     private static final System.Logger LOG = System.getLogger(ExampleFieldedBufferHandler.class.getName());

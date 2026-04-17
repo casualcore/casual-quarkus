@@ -160,6 +160,17 @@ and
 QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev
 ```
 
+or when using the fat jar:
+```sh
+CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
+```
+
+and
+
+```sh
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/example-app-1.0.0-runner.jar
+```
+
 You can then test, for instance the fielded service, as such:
 ```sh
 $curl 'localhost:8080/casual/simpleObject?id=42&name=bob'
@@ -173,6 +184,8 @@ Bazinga!
 ```
 
 Note that the example application with the ```peer``` profile is exposing port 8000 instead of 8080.
+Also note that if you want to run the examples that uses their own buffer handlers etc, you need to use the fat jar version as SPI will not work for
+the user application types when using ```quarkusDev```.
 
 
 ## Architecture

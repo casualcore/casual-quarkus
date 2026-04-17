@@ -1,5 +1,6 @@
 package se.laz.casual.example.json;
 
+import com.google.gson.JsonElement;
 import jakarta.enterprise.context.ApplicationScoped;
 import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.CasualBufferType;
@@ -15,11 +16,15 @@ import se.laz.casual.spi.Priority;
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static java.lang.System.Logger.Level.INFO;
 
-@ApplicationScoped
+/**
+ * A very simple JsonBufferHandler for use with the sum service
+ */
 public class JsonBufferHandler implements BufferHandler
 {
     private static final Logger LOG = System.getLogger(JsonBufferHandler.class.getName());
@@ -39,13 +44,11 @@ public class JsonBufferHandler implements BufferHandler
     public ServiceCallInfo fromRequest(InboundRequestInfo requestInfo, InboundRequest request)
     {
         Method method = requestInfo.getRealMethod().orElseThrow(() -> new CasualRuntimeException("real method is missing"));
-        String json = request.getBuffer().toString();
-        if (json.startsWith("\"") && json.endsWith("\""))
-        {
-            // Basic unescaping for GSON double-encoding
-            json = json.substring(1, json.length() - 1).replace("\\\"", "\"");
-        }
-        CasualJsonRequest envelope = JsonProviderFactory.getJsonProvider().fromJson(json, CasualJsonRequest.class);
+        JsonBuffer buffer = JsonBuffer.of(request.getBuffer().getBytes());
+        String json = buffer.toString();
+        LOG.log(INFO, "json payload: " + json);
+        var jsonProvider = JsonProviderFactory.getJsonProvider();  // cache it
+        CasualJsonRequest envelope = jsonProvider.fromJson(json, CasualJsonRequest.class);
         if (envelope.params() == null)
         {
             return ServiceCallInfo.of(method, new Object[method.getParameterCount()]);
@@ -53,19 +56,17 @@ public class JsonBufferHandler implements BufferHandler
         Object[] actualArgs = new Object[method.getParameterCount()];
         for (int i = 0; i < method.getParameterCount(); i++)
         {
-            // Since envelope.params() is Object[], GSON will have unmarshalled
-            // nested objects into LinkedHashMaps or Doubles.
-            // We re-marshal and unmarshal to the specific target type:
-            String paramJson = JsonProviderFactory.getJsonProvider().toJson(envelope.params()[i]);
-            actualArgs[i] = JsonProviderFactory.getJsonProvider().fromJson(paramJson, method.getParameterTypes()[i]);
+            Class<?> targetType = method.getParameterTypes()[i];
+            JsonElement paramElement = envelope.params()[i];
+            String paramJson = jsonProvider.toJson(paramElement);
+            actualArgs[i] = jsonProvider.fromJson(paramJson, targetType);
         }
         return ServiceCallInfo.of(method, actualArgs);
     }
 
-
     @Override
-    public InboundResponse toResponse(ServiceCallInfo info, Object result) {
-        // You can also wrap the response: {"result": 15, "error": null}
+    public InboundResponse toResponse(ServiceCallInfo info, Object result)
+    {
         Map<String, Object> wrapper = new HashMap<>();
         wrapper.put("result", result);
         return InboundResponse.createBuilder()

@@ -10,6 +10,7 @@ plugins {
 dependencies {
     compileOnly libs.casual_api
     compileOnly libs.casual_inbound_handler_fielded_buffer
+    compileOnly libs.gson
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-rest'
     // you should run ../gradlew clean build publishToMavenLocal first

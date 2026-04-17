@@ -1,4 +1,6 @@
 package se.laz.casual.example.json;
 
-public record CasualJsonRequest(Object[] params)
+import com.google.gson.JsonElement;
+
+public record CasualJsonRequest(JsonElement[] params)
 {}
