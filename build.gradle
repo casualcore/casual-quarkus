@@ -37,5 +37,10 @@ subprojects {
     compileTestJava {
         options.encoding = 'UTF-8'
     }
+    tasks.named('test') {
+        testLogging {
+            events "started", "passed", "failed", "skipped"
+    	}
+    }
 }
 

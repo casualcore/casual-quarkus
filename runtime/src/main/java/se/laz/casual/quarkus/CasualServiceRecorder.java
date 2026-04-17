@@ -48,7 +48,7 @@ public class CasualServiceRecorder
                 Class<?>[] paramTypes = new Class[descriptor.parameterTypes().size()];
                 for (int i = 0; i < descriptor.parameterTypes().size(); i++)
                 {
-                    paramTypes[i] = loadClass(cl, descriptor.parameterTypes().get(i));
+                    paramTypes[i] = CasualTypeResolver.loadClass(cl, descriptor.parameterTypes().get(i));
                 }
 
                 Method method = beanClass.getMethod(descriptor.methodName(), paramTypes);
@@ -71,35 +71,5 @@ public class CasualServiceRecorder
             }
         }
         LOG.log(INFO, "Successfully registered {0} services", registered);
-    }
-
-    private Class<?> loadClass(ClassLoader cl, String name) throws ClassNotFoundException
-    {
-        return switch (name) {
-            case "byte" -> byte.class;
-            case "short" -> short.class;
-            case "int" -> int.class;
-            case "long" -> long.class;
-            case "float" -> float.class;
-            case "double" -> double.class;
-            case "boolean" -> boolean.class;
-            case "char" -> char.class;
-            case "void" -> void.class;
-            default -> {
-                // Check if it's already an internal JVM descriptor like [Ljava.lang.String;
-                if (name.startsWith("["))
-                {
-                    yield Class.forName(name, false, cl);
-                }
-                // Handle human-readable array syntax "com.foo.Bar[]"
-                if (name.endsWith("[]"))
-                {
-                    String elementClassName = name.substring(0, name.length() - 2);
-                    Class<?> elementClass = loadClass(cl, elementClassName);
-                    yield java.lang.reflect.Array.newInstance(elementClass, 0).getClass();
-                }
-                yield cl.loadClass(name);
-            }
-        };
     }
 }

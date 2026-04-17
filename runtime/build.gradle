@@ -1,6 +1,7 @@
 //-*- coding: utf-8-unix -*-
 plugins {
     id 'java-library'
+    id 'groovy'
     id 'io.quarkus.extension'
     id 'org.kordamp.gradle.jandex'
     id 'maven-publish'
@@ -8,6 +9,10 @@ plugins {
 
 quarkusExtension {
     deploymentModule = 'casual-quarkus-deployment'
+}
+
+test{
+    useJUnitPlatform()
 }
 
 dependencies {
@@ -31,6 +36,14 @@ dependencies {
     implementation libs.casual_api_spi_impl
 
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
+
+    testImplementation platform(libs.groovy_bom)
+    testImplementation libs.groovy
+    testImplementation platform(libs.spock_bom)
+    testImplementation libs.spock_core
+    testImplementation libs.spock_junit4
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 // The Quarkus extension annotation processor locates pom.xml by walking 3 parent
