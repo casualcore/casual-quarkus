@@ -2,9 +2,9 @@
 
 A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https://github.com/casualcore/casual) middleware via [IronJacamar](https://docs.quarkiverse.io/quarkus-ironjacamar/dev/) (JCA).
 
-Provides both **inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
+Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
 
-Currently wraps up Casual JCA 3.4.2.
+Currently wraps up Casual JCA 3.4.3
 
 ## Getting Started
 
@@ -70,6 +70,7 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
     },
     "unmanaged": true,
     "outbound":{
+        "unmanaged": true,
         "useEpoll": true
     },
     "inbound": {
@@ -106,7 +107,7 @@ of ```tpacall``` instead of tpcall.
 
 ### Multiple outbound pools
 
-Additional pools can have any name. Only one pool needs to be named `casual` for inbound/reverse-inbound to work:
+Additional pools can have any name. Only one pool `needs` to be named `casual`:
 
 ```properties
 quarkus.ironjacamar.casual.ra.kind=casual
@@ -127,7 +128,7 @@ The [`example/`](example/) directory contains a standalone Quarkus application t
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
 - **A single outbound pool** -- one outbound pool configuration showing named pool setup
 - **Virtual threads** -- enabled for non-blocking service handling
-- **casual config file** -- showing basic usage, including reverse inbound. See [https://github.com/casualcore/casual-java](casual-java) for documentation
+- **casual config file** -- showing basic usage. See [https://github.com/casualcore/casual-java](casual-java) for documentation
 - **example fielded file** -- used in the fielded test service
 - **user defined handlers** -- showing how a user application can implement their own ServiceHandler, BufferHandler and ServiceHandlerExtension
 
