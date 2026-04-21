@@ -14,9 +14,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import se.laz.casual.api.CasualRuntimeException;
@@ -47,14 +45,12 @@ import java.util.concurrent.CompletionStage;
 @Path("/casual")
 public class CasualResource
 {
-    @Inject
-    @Identifier("casual")
     CasualConnectionFactory casualOne;
 
-    @GET
-    @Produces(MediaType.TEXT_PLAIN)
-    public String hello() {
-        return "Hello from Quarkus REST";
+    @Inject
+    public CasualResource(@Identifier("casual") CasualConnectionFactory casualOne)
+    {
+        this.casualOne = casualOne;
     }
 
     @POST
@@ -139,7 +135,7 @@ public class CasualResource
                                      }
                                      else
                                      {
-                                         throw new RuntimeException("tpcall failed: " + reply.getErrorState());
+                                         throw new CasualRuntimeException("tpcall failed: " + reply.getErrorState());
                                      }
                                  });
             }

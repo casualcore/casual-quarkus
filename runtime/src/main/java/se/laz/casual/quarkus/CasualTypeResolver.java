@@ -29,7 +29,7 @@ public class CasualTypeResolver
                 {
                     yield Class.forName(name, false, cl);
                 }
-                xs// Handle human-readable array syntax "com.foo.Bar[]"
+                // Handle human-readable array syntax "com.foo.Bar[]"
                 if (name.endsWith("[]"))
                 {
                     String elementClassName = name.substring(0, name.length() - 2);

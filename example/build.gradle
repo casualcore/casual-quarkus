@@ -1,4 +1,7 @@
 //-*- coding: utf-8-unix -*-
+plugins{
+    id "org.sonarqube" version "7.1.0.6387"
+}
 apply from: "$rootProject.projectDir/versions.gradle"
 
 allprojects {

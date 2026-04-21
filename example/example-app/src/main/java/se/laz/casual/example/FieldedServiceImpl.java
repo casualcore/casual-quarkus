@@ -7,8 +7,6 @@ package se.laz.casual.example;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import se.laz.casual.api.service.CasualService;
-import se.laz.casual.api.buffer.type.fielded.FieldedTypeBuffer;
-import se.laz.casual.jca.inbound.handler.InboundResponse;
 
 /**
  * Fielded service implementation that echoes back the received fielded buffer

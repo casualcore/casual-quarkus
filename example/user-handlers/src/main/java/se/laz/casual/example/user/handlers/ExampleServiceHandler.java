@@ -19,7 +19,7 @@ import static java.lang.System.getLogger;
 
 public class ExampleServiceHandler implements ServiceHandler
 {
-    private static final Logger LOG = getLogger(CasualQuarkusServiceHandler.class.getName());
+    private static final Logger LOG = getLogger(ExampleServiceHandler.class.getName());
     private static final CasualQuarkusServiceHandler delegate = new CasualQuarkusServiceHandler();
     @Override
     public boolean canHandleService(String serviceName)

@@ -1,7 +1,6 @@
 package se.laz.casual.example.json;
 
 import com.google.gson.JsonElement;
-import jakarta.enterprise.context.ApplicationScoped;
 import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.CasualBufferType;
 import se.laz.casual.api.buffer.type.JsonBuffer;
@@ -16,9 +15,7 @@ import se.laz.casual.spi.Priority;
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static java.lang.System.Logger.Level.INFO;
 
@@ -57,7 +54,7 @@ public class JsonBufferHandler implements BufferHandler
         for (int i = 0; i < method.getParameterCount(); i++)
         {
             Class<?> targetType = method.getParameterTypes()[i];
-            JsonElement paramElement = envelope.params()[i];
+            JsonElement paramElement = envelope.params().get(i);
             String paramJson = jsonProvider.toJson(paramElement);
             actualArgs[i] = jsonProvider.fromJson(paramJson, targetType);
         }

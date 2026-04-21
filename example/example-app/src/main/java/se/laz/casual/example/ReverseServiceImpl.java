@@ -11,7 +11,6 @@ import se.laz.casual.api.service.CasualService;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
 
-import java.lang.System.Logger;
 import java.util.List;
 
 /**

@@ -46,7 +46,8 @@ class CasualTypeResolverTest extends Specification
     }
 
     @Unroll
-    def "loadClass resolves array syntax '#arrayName'"() {
+    def "loadClass resolves array syntax '#arrayName'"()
+    {
         expect:
         CasualTypeResolver.loadClass(cl, arrayName) == expectedClass
 
