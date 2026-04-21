@@ -65,7 +65,7 @@ public class CasualServiceRecorder
                         descriptor.serviceName(), descriptor.className(), descriptor.methodName());
 
             }
-            catch (Throwable e)
+            catch (Exception e)
             {
                 LOG.log(ERROR, "Failed to register Casual service: " + descriptor.serviceName(), e);
             }

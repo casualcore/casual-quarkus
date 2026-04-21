@@ -52,7 +52,7 @@ public class CasualSPIRecorder
                 }
                 LOG.log(Logger.Level.INFO, () -> "Runtime registered SPI: " + item.implementationClass());
             }
-            catch (Throwable e)
+            catch (Exception e)
             {
                 throw new CasualRuntimeException("Failed to register SPI " + item.implementationClass(), e);
             }

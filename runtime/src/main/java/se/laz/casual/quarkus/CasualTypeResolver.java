@@ -24,12 +24,12 @@ public class CasualTypeResolver
             case "char" -> char.class;
             case "void" -> void.class;
             default -> {
-                // Check if it's already an internal JVM descriptor like [Ljava.lang.String;
+                // Check if it's already an internal JVM descriptor
                 if (name.startsWith("["))
                 {
                     yield Class.forName(name, false, cl);
                 }
-                // Handle human-readable array syntax "com.foo.Bar[]"
+                xs// Handle human-readable array syntax "com.foo.Bar[]"
                 if (name.endsWith("[]"))
                 {
                     String elementClassName = name.substring(0, name.length() - 2);
