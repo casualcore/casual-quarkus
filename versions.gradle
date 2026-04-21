@@ -1,6 +1,6 @@
 //-*- coding: utf-8-unix -*-
 def gson_version = '2.13.1'
-def casual_version = '3.4.2'
+def casual_version = '3.4.4-SNAPSHOT'
 
 ext.libs = [
     casual_api: "se.laz.casual:casual-api:${casual_version}",
@@ -16,9 +16,11 @@ ext.libs = [
     casual_internal: "se.laz.casual:casual-internal:${casual_version}",
     gson: "com.google.code.gson:gson:${gson_version}",
     commons_io: 'commons-io:commons-io:2.11.0',
+    // for spock
     groovy_bom: 'org.apache.groovy:groovy-bom:5.0.5',
-    groovy: 'org.apache.groovy:groovy',
+    groovy_lang: 'org.apache.groovy:groovy',
     spock_bom: 'org.spockframework:spock-bom:2.4-groovy-5.0',
     spock_core: 'org.spockframework:spock-core',
-    spock_junit4: 'org.spockframework:spock-junit4'
+    junit_platform: 'org.junit.platform:junit-platform-launcher',
+    byte_buddy: 'net.bytebuddy:byte-buddy:1.17.5'
 ]

@@ -70,73 +70,82 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public InboundResponse invokeService(InboundRequest request)
     {
-        String serviceName = request.getServiceName();
-        CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
-        if (registry == null)
-        {
-            LOG.log(Logger.Level.ERROR, () -> "CasualQuarkusServiceRegistry not initialized!");
-            return InboundResponse.createBuilder()
-                    .errorState(ErrorState.TPESYSTEM)
-                    .transactionState(TransactionState.ROLLBACK_ONLY)
-                    .build();
-        }
-
-        ServiceEntry serviceEntry = registry.getService(serviceName);
-
-        if (serviceEntry == null)
-        {
-            LOG.log(Logger.Level.WARNING, () -> "Service not found: " + serviceName);
-            return InboundResponse.createBuilder()
-                    .errorState(ErrorState.TPENOENT)
-                    .transactionState(TransactionState.ROLLBACK_ONLY)
-                    .build();
-        }
-
-        ServiceHandlerExtension serviceHandlerExtension = ServiceHandlerExtensionFactory.getExtension(CasualService.class.getName());
-        ServiceHandlerExtensionContext extensionContext = null;
+        var contextClassLoader = Thread.currentThread().getContextClassLoader();
         try
         {
-            Object beanInstance = serviceEntry.beanInstance();
-            Method method = serviceEntry.method();
+            Thread.currentThread().setContextClassLoader(CasualQuarkusServiceHandler.class.getClassLoader());
+            String serviceName = request.getServiceName();
+            CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
+            if (registry == null)
+            {
+                LOG.log(Logger.Level.ERROR, () -> "CasualQuarkusServiceRegistry not initialized!");
+                return InboundResponse.createBuilder()
+                                      .errorState(ErrorState.TPESYSTEM)
+                                      .transactionState(TransactionState.ROLLBACK_ONLY)
+                                      .build();
+            }
 
-            LOG.log(Logger.Level.TRACE,() -> "Calling " + beanInstance.getClass().getSimpleName()
-                + "." + method.getName() + "()");
+            ServiceEntry serviceEntry = registry.getService(serviceName);
 
-            BufferHandler bufferHandler = BufferHandlerFactory.getHandler(request.getBuffer().getType());
-            extensionContext = serviceHandlerExtension.before(request, bufferHandler);
+            if (serviceEntry == null)
+            {
+                LOG.log(Logger.Level.WARNING, () -> "Service not found: " + serviceName);
+                return InboundResponse.createBuilder()
+                                      .errorState(ErrorState.TPENOENT)
+                                      .transactionState(TransactionState.ROLLBACK_ONLY)
+                                      .build();
+            }
 
-            Proxy dummyProxy = (Proxy) Proxy.newProxyInstance(
-                    Thread.currentThread().getContextClassLoader(),
-                    new Class<?>[]{CasualMarkerInterface.class},
-                    (proxy, m, args) -> null
-            );
+            ServiceHandlerExtension serviceHandlerExtension = ServiceHandlerExtensionFactory.getExtension(CasualService.class.getName());
+            ServiceHandlerExtensionContext extensionContext = null;
+            try
+            {
+                Object beanInstance = serviceEntry.beanInstance();
+                Method method = serviceEntry.method();
 
-            InboundRequestInfo requestInfo = InboundRequestInfo.createBuilder()
-                                                               .withProxy(dummyProxy)
-                                                               .withProxyMethod(method)
-                                                               .withRealMethod(method)
-                                                               .withServiceName(serviceName)
-                                                               .build();
-            ServiceCallInfo info = bufferHandler.fromRequest(requestInfo, request);
-            Object[] params = serviceHandlerExtension.convertRequestParams(extensionContext, info.getParams());
-            Object result = method.invoke(beanInstance, params);
-            return serviceHandlerExtension.handleSuccess( extensionContext, bufferHandler.toResponse( info, result ));
-        }
-        catch (Exception e)
-        {
-            LOG.log(Logger.Level.ERROR, "Error invoking service " + serviceName, e);
-            InboundResponse response = InboundResponse.createBuilder()
-                    .errorState(ErrorState.TPESVCERR)
-                    .transactionState(TransactionState.ROLLBACK_ONLY)
-                    .build();
-            return serviceHandlerExtension.handleError(extensionContext, request, response, e);
+                LOG.log(Logger.Level.TRACE, () -> "Calling " + beanInstance.getClass().getSimpleName()
+                        + "." + method.getName() + "()");
+
+                BufferHandler bufferHandler = BufferHandlerFactory.getHandler(request.getBuffer().getType());
+                extensionContext = serviceHandlerExtension.before(request, bufferHandler);
+
+                Proxy dummyProxy = (Proxy) Proxy.newProxyInstance(
+                        Thread.currentThread().getContextClassLoader(),
+                        new Class<?>[]{CasualMarkerInterface.class},
+                        (proxy, m, args) -> null
+                );
+
+                InboundRequestInfo requestInfo = InboundRequestInfo.createBuilder()
+                                                                   .withProxy(dummyProxy)
+                                                                   .withProxyMethod(method)
+                                                                   .withRealMethod(method)
+                                                                   .withServiceName(serviceName)
+                                                                   .build();
+                ServiceCallInfo info = bufferHandler.fromRequest(requestInfo, request);
+                Object[] params = serviceHandlerExtension.convertRequestParams(extensionContext, info.getParams());
+                Object result = method.invoke(beanInstance, params);
+                return serviceHandlerExtension.handleSuccess(extensionContext, bufferHandler.toResponse(info, result));
+            }
+            catch (Exception e)
+            {
+                LOG.log(Logger.Level.ERROR, "Error invoking service " + serviceName, e);
+                InboundResponse response = InboundResponse.createBuilder()
+                                                          .errorState(ErrorState.TPESVCERR)
+                                                          .transactionState(TransactionState.ROLLBACK_ONLY)
+                                                          .build();
+                return serviceHandlerExtension.handleError(extensionContext, request, response, e);
+            }
+            finally
+            {
+                if (extensionContext != null)
+                {
+                    serviceHandlerExtension.after(extensionContext);
+                }
+            }
         }
         finally
         {
-            if (extensionContext != null)
-            {
-                serviceHandlerExtension.after(extensionContext);
-            }
+            Thread.currentThread().setContextClassLoader(contextClassLoader);
         }
     }
 

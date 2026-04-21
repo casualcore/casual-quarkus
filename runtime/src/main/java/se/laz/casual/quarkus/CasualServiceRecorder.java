@@ -17,7 +17,7 @@ import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 
 /**
- * Uses the services found at build time to register in the CasualQuarkusServiceRegistry
+ * Uses the services found at build time to register in the CasualQuarkusServiceRegistry (at runtime)
  */
 @Recorder
 public class CasualServiceRecorder

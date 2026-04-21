@@ -7,6 +7,13 @@ plugins {
     id 'maven-publish'
 }
 
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
 quarkusExtension {
     deploymentModule = 'casual-quarkus-deployment'
 }
@@ -38,12 +45,13 @@ dependencies {
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
 
     testImplementation platform(libs.groovy_bom)
-    testImplementation libs.groovy
+    testImplementation libs.groovy_lang
+
     testImplementation platform(libs.spock_bom)
     testImplementation libs.spock_core
-    testImplementation libs.spock_junit4
-    testImplementation 'net.bytebuddy:byte-buddy:1.14.12'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation libs.byte_buddy
+
+    testRuntimeOnly libs.junit_platform
 }
 
 // The Quarkus extension annotation processor locates pom.xml by walking 3 parent

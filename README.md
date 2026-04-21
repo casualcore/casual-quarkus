@@ -123,7 +123,7 @@ quarkus.ironjacamar.other-pool.ra.config.port=7771
 
 The [`example/`](example/) directory contains a standalone Quarkus application that demonstrates:
 
-- **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, and `FieldedServiceImpl` exposed as Casual services via `@CasualService`
+- **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, `FieldedServiceImpl` and `SumServiceImpl` exposed as Casual services via `@CasualService`
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
 - **A single outbound pool** -- one outbound pool configuration showing named pool setup
 - **Virtual threads** -- enabled for non-blocking service handling
@@ -183,9 +183,15 @@ $curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http:/
 Bazinga!
 ```
 
-Note that the example application with the ```peer``` profile is exposing port 8000 instead of 8080.
-Also note that if you want to run the examples that uses their own buffer handlers etc, you need to use the fat jar version as SPI will not work for
-the user application types when using ```quarkusDev```.
+To test the sum service, which uses the user applications ```JsonBufferHandler```:
+```sh
+curl -X POST -d @sum.json -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/sum?bufferType=.json/
+```
+
+
+Note that the example application with the `peer` profile is exposing port 8000 instead of 8080.
+Also note that if you want to run the examples that uses their own buffer handlers etc, you need to restart the application when you have changed the handlers even when running with `quarkusDev`. 
+This since the handlers are found during build time of the user application.
 
 
 ## Architecture
@@ -199,7 +205,14 @@ quarkus-casual-deployment/  (deployment module)
 
 `CasualProcessor` uses Jandex to discover `@CasualService` annotations and produces `CasualServiceBuildItem`s. A `@Record(RUNTIME_INIT)` build step converts these into `CasualServiceDescriptor`s and calls `CasualServiceRecorder.registerServices()`, which resolves CDI bean instances and registers them in `CasualQuarkusServiceRegistry`.
 
-### Runtime
+It also finds SPI implementations at build time and produces `CasualSPIBuildItem`s. These are then registered at runtime via a build step that converts these into `CasualSPIDescriptor`s
+and calls `CasualSPIRecorder.registerSpiImplementations` that pre registers the SPI implementations into Casual JCA's handler factories.
+The handlers that can be overriden this way by a user application are:
+* `se.laz.casual.jca.inbound.handler.buffer.BufferHandler`
+* `se.laz.casual.jca.inbound.handler.service.ServiceHandler`
+* `se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension`
+* `se.laz.casual.api.buffer.type.fielded.marshalling.FieldedMarshaller`
+
 
 | Class | Role |
 |---|---|

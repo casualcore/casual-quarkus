@@ -15,17 +15,22 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
+import se.laz.casual.quarkus.CasualSPIDescriptor;
+import se.laz.casual.quarkus.CasualSPIRecorder;
+import se.laz.casual.quarkus.CasualSPIType;
 import se.laz.casual.quarkus.CasualServiceDescriptor;
 import se.laz.casual.quarkus.CasualServiceRecorder;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
@@ -68,36 +73,41 @@ class CasualProcessor
     }
 
     @BuildStep
-    void registerSpiImplementations(CombinedIndexBuildItem index, BuildProducer<AdditionalBeanBuildItem> additionalBeans,
-                                    BuildProducer<ReflectiveClassBuildItem> reflectiveClasses)
+    void registerSpiImplementationsForServiceLoader(
+            CombinedIndexBuildItem combinedIndex,
+            BuildProducer<ServiceProviderBuildItem> serviceProviders,
+            BuildProducer<CasualSpiBuildItem> spiBuildItems,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeans)
     {
-        List<DotName> interfaces = List.of(
+        // These are the SPI types that a user application can implement
+        // if not, default Casual JCA implementations are used
+        List<DotName> spiInterfaces = List.of(
                 DotName.createSimple("se.laz.casual.jca.inbound.handler.buffer.BufferHandler"),
                 DotName.createSimple("se.laz.casual.jca.inbound.handler.service.ServiceHandler"),
                 DotName.createSimple("se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension"),
-                DotName.createSimple("se.laz.casual.api.external.json.JsonProvider"),
                 DotName.createSimple("se.laz.casual.api.buffer.type.fielded.marshalling.FieldedMarshaller")
         );
-
-        for (DotName interfaceName : interfaces)
+        IndexView index = combinedIndex.getIndex();
+        for (DotName interfaceName : spiInterfaces)
         {
-            // find everything implementing the interface in the entire application
-            // this means it also works for implementations in the user application
-            // except when they run via quarkusDev
-            for (ClassInfo implementation : index.getIndex().getAllKnownImplementations(interfaceName))
+            String interfaceClassName = interfaceName.toString();
+            for (ClassInfo implementation : index.getAllKnownImplementations(interfaceName))
             {
-                String className = implementation.name().toString();
-                // make it a CDI bean and prevent pruning
+                String implClassName = implementation.name().toString();
+                serviceProviders.produce(new ServiceProviderBuildItem(
+                        interfaceClassName,
+                        implClassName
+                ));
                 additionalBeans.produce(AdditionalBeanBuildItem.builder()
-                                                               .addBeanClass(className)
+                                                               .addBeanClass(implClassName)
                                                                .setUnremovable()
                                                                .setDefaultScope(BuiltinScope.APPLICATION.getName())
                                                                .build());
-                LOG.log(System.Logger.Level.INFO, () -> "Registered implementation for reflection and unremovable bean: " + implementation.name());
+                spiBuildItems.produce(new CasualSpiBuildItem(interfaceName.toString(), implClassName));
+                LOG.log(System.Logger.Level.INFO, () -> "Registered SPI implementation for ServiceLoader + CDI: " + implClassName);
             }
         }
     }
-
 
     @BuildStep
     void discoverCasualServices(CombinedIndexBuildItem combinedIndex,
@@ -138,6 +148,21 @@ class CasualProcessor
                     item.getCategory(),
                     item.getParameterTypes()));
         }
-        recorder.registerServices(beanContainer.getValue(), descriptors);
+        recorder.registerServices(beanContainer.getValue(), Collections.unmodifiableList(descriptors));
+    }
+
+    @BuildStep
+    @Record(RUNTIME_INIT)
+    void registerSPIImplementations(CasualSPIRecorder recorder,
+                                    List<CasualSpiBuildItem> spiBuildItems)
+    {
+        List<CasualSPIDescriptor> descriptors = new ArrayList<>();
+        for (var item : spiBuildItems)
+        {
+            descriptors.add(new CasualSPIDescriptor(
+                    CasualSPIType.unmarshall(item.getServiceInterface()),
+                    item.getImplementationClass()));
+        }
+        recorder.registerSpiImplementations(Collections.unmodifiableList(descriptors));
     }
 }

@@ -97,6 +97,4 @@ class CasualTypeResolverTest extends Specification
         then:
         thrown(ClassNotFoundException)
     }
-
 }
-
