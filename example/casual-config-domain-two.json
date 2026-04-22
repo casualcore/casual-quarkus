@@ -14,10 +14,12 @@
             "services": [
                 "echo",
                 "reverse",
-                "echoFielded"
+                "echoFielded",
+                "sum"
             ]
         }       
     },
+  ]
     "eventServer":{
         "portNumber": 7896,
         "useEpoll": true

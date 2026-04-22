@@ -194,6 +194,9 @@ Note that the example application with the `peer` profile is exposing port 8000 
 Also note that if you want to run the examples that uses their own buffer handlers etc, you need to restart the application when you have changed the handlers even when running with `quarkusDev`. 
 This since the handlers are found during build time of the user application.
 
+There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
+Note, it needs a reverse outbound to connect to and currently only casual cam provide that.
+
 
 ## Architecture
 

@@ -14,7 +14,8 @@
             "services": [
                 "echo",
                 "reverse",
-                "echoFielded"
+                "echoFielded",
+                "sum"
             ]
         }       
     },
