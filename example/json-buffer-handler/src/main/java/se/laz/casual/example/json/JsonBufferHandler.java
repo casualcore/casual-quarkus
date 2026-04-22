@@ -12,19 +12,15 @@ import se.laz.casual.jca.inbound.handler.buffer.InboundRequestInfo;
 import se.laz.casual.jca.inbound.handler.buffer.ServiceCallInfo;
 import se.laz.casual.spi.Priority;
 
-import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-
-import static java.lang.System.Logger.Level.INFO;
 
 /**
  * A very simple JsonBufferHandler for use with the sum service
  */
 public class JsonBufferHandler implements BufferHandler
 {
-    private static final Logger LOG = System.getLogger(JsonBufferHandler.class.getName());
     @Override
     public Priority getPriority()
     {
@@ -33,7 +29,6 @@ public class JsonBufferHandler implements BufferHandler
     @Override
     public boolean canHandleBuffer(String bufferType)
     {
-        LOG.log(INFO, () -> "JsonBufferHandler::canHandleBuffer " + bufferType);
         return CasualBufferType.JSON.getName().equalsIgnoreCase(bufferType);
     }
 
@@ -43,7 +38,6 @@ public class JsonBufferHandler implements BufferHandler
         Method method = requestInfo.getRealMethod().orElseThrow(() -> new CasualRuntimeException("real method is missing"));
         JsonBuffer buffer = JsonBuffer.of(request.getBuffer().getBytes());
         String json = buffer.toString();
-        LOG.log(INFO, "json payload: " + json);
         var jsonProvider = JsonProviderFactory.getJsonProvider();  // cache it
         CasualJsonRequest envelope = jsonProvider.fromJson(json, CasualJsonRequest.class);
         if (envelope.params() == null)

@@ -6,8 +6,8 @@ plugins {
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation project(':json-buffer-handler')
-    // comment out this to see that it then does not use the handlers provided here
-    implementation project(':user-handlers')
+    // remove comment to see that we then make use of the user handlers in this application
+    // implementation project(':user-handlers')
     implementation 'io.quarkus:quarkus-rest'
     // you should run ../gradlew clean build publishToMavenLocal first
     implementation libs.casual_quarkus
