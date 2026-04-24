@@ -200,7 +200,9 @@ Note, it needs a reverse outbound to connect to and currently only casual cam pr
 ## XA note for quarkus
 
 At REST endpoints and at exposed java services `@CasualService`:
+```java
 @Transactional(Transactional.TxType.REQUIRED)
+```
 
 
 ## Performance Tuning for Quarkus
