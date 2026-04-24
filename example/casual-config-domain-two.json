@@ -13,6 +13,7 @@
             "mode": "discover",
             "services": [
                 "echo",
+                "nonTransactionalEcho",
                 "reverse",
                 "echoFielded",
                 "sum"
@@ -20,7 +21,7 @@
         }       
     },
     "eventServer":{
-        "portNumber": 7896,
+        "portNumber": 9898,
         "useEpoll": true
     }
 }

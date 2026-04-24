@@ -10,7 +10,8 @@ import io.quarkus.runtime.annotations.RecordableConstructor;
 import java.util.List;
 import java.util.Objects;
 
-public record CasualServiceDescriptor(String serviceName, String className, String methodName, String category, List<String> parameterTypes)
+public record CasualServiceDescriptor(String serviceName, String className, String methodName, String category, List<String> parameterTypes,
+                                      String transactionType)
 {
     @RecordableConstructor
     public CasualServiceDescriptor

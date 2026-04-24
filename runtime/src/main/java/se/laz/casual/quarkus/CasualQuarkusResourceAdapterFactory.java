@@ -41,10 +41,12 @@ public class CasualQuarkusResourceAdapterFactory implements ResourceAdapterFacto
         Map<String, String> config = quarkusAdapter.getConfig();
         mcf.setHostName(config.get("host"));
         mcf.setPortNumber(Integer.parseInt(config.get("port")));
-        if (config.containsKey("network-connection-pool-size")) {
+        if (config.containsKey("network-connection-pool-size"))
+        {
             mcf.setNetworkConnectionPoolSize(Integer.parseInt(config.get("network-connection-pool-size")));
         }
-        if (config.containsKey("network-connection-pool-name")) {
+        if (config.containsKey("network-connection-pool-name"))
+        {
             mcf.setNetworkConnectionPoolName(config.get("network-connection-pool-name"));
         }
         mcf.setResourceAdapter(adapter);
@@ -56,7 +58,8 @@ public class CasualQuarkusResourceAdapterFactory implements ResourceAdapterFacto
     {
         CasualActivationSpec activationSpec = new CasualActivationSpec();
         activationSpec.setResourceAdapter(adapter);
-        if (config != null && config.containsKey("port")) {
+        if (config != null && config.containsKey("port"))
+        {
             activationSpec.setPort(Integer.parseInt(config.get("port")));
         }
         return activationSpec;

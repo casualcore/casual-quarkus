@@ -30,6 +30,7 @@ import se.laz.casual.api.buffer.type.ServiceBuffer;
 import se.laz.casual.api.buffer.type.fielded.FieldedTypeBuffer;
 import se.laz.casual.api.buffer.type.fielded.marshalling.FieldedTypeBufferProcessor;
 import se.laz.casual.api.flags.AtmiFlags;
+import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.Flag;
 import se.laz.casual.api.flags.ServiceReturnState;
 import se.laz.casual.jca.CasualConnection;
@@ -154,6 +155,11 @@ public class CasualResource
                                                              throw (err instanceof CompletionException) ?
                                                                      (CompletionException)err : new CompletionException(err);
                                                          }
+                                                         reply.ifPresent(r -> {
+                                                            if(r.getErrorState() != ErrorState.OK){
+                                                                 throw new CasualRuntimeException("Error: " + r.getErrorState());
+                                                            }
+                                                         });
                                                          return reply.orElseThrow(() -> new CasualRuntimeException("No reply"))
                                                                      .getReplyBuffer();
                                                      });

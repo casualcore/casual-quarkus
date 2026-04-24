@@ -7,10 +7,12 @@ package se.laz.casual.quarkus;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.lang.System.Logger;
+
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
 
 /**
  * Quarkus-specific service registry that holds CDI bean instances and their service methods.
@@ -26,7 +28,7 @@ public class CasualQuarkusServiceRegistry
 
     public CasualQuarkusServiceRegistry()
     {
-        LOG.log(Logger.Level.INFO, () -> "=== CasualQuarkusServiceRegistry instance created ===");
+        LOG.log(INFO, () -> "=== CasualQuarkusServiceRegistry instance created ===");
     }
 
     public static CasualQuarkusServiceRegistry getInstance()
@@ -38,11 +40,10 @@ public class CasualQuarkusServiceRegistry
         return instance;
     }
 
-    public void registerService(String serviceName, String category, Object beanInstance, Method method)
+    public void registerService(ServiceEntry entry)
     {
-        ServiceEntry entry = new ServiceEntry(serviceName, category, beanInstance, method);
-        services.put(serviceName, entry);
-        LOG.log(Logger.Level.INFO, () -> "Service registered: " + serviceName + " -> " + beanInstance.getClass().getSimpleName());
+        services.put(entry.serviceName(), entry);
+        LOG.log(INFO, () -> "Service registered: " + entry.serviceName() + " -> " + entry.beanInstance().getClass().getSimpleName());
     }
 
     public ServiceEntry getService(String serviceName)
@@ -53,7 +54,7 @@ public class CasualQuarkusServiceRegistry
     public boolean hasService(String serviceName)
     {
         boolean has = services.containsKey(serviceName);
-        LOG.log(Logger.Level.INFO, () -> "hasService('" + serviceName + "'): " + has + " (total services: " + services.size() + ")");
+        LOG.log(TRACE, () -> "hasService('" + serviceName + "'): " + has + " (total services: " + services.size() + ")");
         return has;
     }
 }

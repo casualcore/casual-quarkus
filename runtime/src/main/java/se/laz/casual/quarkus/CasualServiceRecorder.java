@@ -53,17 +53,11 @@ public class CasualServiceRecorder
 
                 Method method = beanClass.getMethod(descriptor.methodName(), paramTypes);
 
-                registry.registerService(
-                        descriptor.serviceName(),
-                        descriptor.category(),
-                        beanInstance,
-                        method
-                );
+                ServiceEntry entry = new ServiceEntry(descriptor.serviceName(), descriptor.category(), beanInstance, method, TransactionTypeMapper.map(descriptor.transactionType()));
+                registry.registerService(entry);
 
                 registered++;
-                LOG.log(INFO, "Registered: {0} -> {1}.{2}()",
-                        descriptor.serviceName(), descriptor.className(), descriptor.methodName());
-
+                LOG.log(INFO, "Registered: {0}", entry);
             }
             catch (Exception e)
             {

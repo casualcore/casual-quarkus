@@ -16,7 +16,9 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.IndexDependencyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ServiceProviderBuildItem;
+import jakarta.transaction.Transactional;
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
@@ -40,6 +42,7 @@ class CasualProcessor
     private static final String FEATURE = "casual";
     private static final String GROUP_NAME = "se.laz.casual";
     private static final DotName CASUAL_SERVICE = DotName.createSimple("se.laz.casual.api.service.CasualService");
+    private static final DotName TRANSACTION_ANNOTATION = DotName.createSimple("jakarta.transaction.Transactional");
     private static final System.Logger LOG = System.getLogger(CasualProcessor.class.getName());
 
     @BuildStep
@@ -118,17 +121,31 @@ class CasualProcessor
                                                                   .getAnnotations(CASUAL_SERVICE);
         for (AnnotationInstance annotation : annotations)
         {
+            if (annotation.target().kind() != AnnotationTarget.Kind.METHOD)
+            {
+                continue;
+            }
             String className = annotation.target().asMethod().declaringClass().name().toString();
             String methodName = annotation.target().asMethod().name();
             String serviceName = annotation.value("name").asString();
             AnnotationValue categoryValue = annotation.value("category");
             String category = categoryValue != null ? categoryValue.asString() : "";
+
+            String transactionType = null;
+            AnnotationInstance txAnn = annotation.target().asMethod().annotation(TRANSACTION_ANNOTATION);
+            if (txAnn != null)
+            {
+                AnnotationValue value = txAnn.value();
+                //  defaults to REQUIRED as per:
+                //  https://jakarta.ee/specifications/transactions/2.0/apidocs/jakarta/transaction/transactional
+                transactionType = value.asEnum();
+            }
             unremovableBeans.produce(UnremovableBeanBuildItem.beanClassNames(className));
             MethodInfo method = annotation.target().asMethod();
             List<String> params = method.parameters().stream()
                                         .map(p -> p.type().name().toString())
                                         .toList();
-            casualServices.produce(new CasualServiceBuildItem(serviceName, className, methodName, category, params));
+            casualServices.produce(new CasualServiceBuildItem(serviceName, className, methodName, category, params, transactionType));
         }
     }
 
@@ -146,7 +163,8 @@ class CasualProcessor
                     item.getClassName(),
                     item.getMethodName(),
                     item.getCategory(),
-                    item.getParameterTypes()));
+                    item.getParameterTypes(),
+                    item.getTransactionType()));
         }
         recorder.registerServices(beanContainer.getValue(), Collections.unmodifiableList(descriptors));
     }
