@@ -6,10 +6,10 @@
 package se.laz.casual.quarkus;
 
 import io.netty.channel.Channel;
-import java.lang.System.Logger;
 import io.quarkiverse.ironjacamar.ResourceEndpoint;
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.resource.spi.XATerminator;
 import jakarta.resource.spi.work.WorkManager;
 import se.laz.casual.api.network.protocol.messages.CasualNWMessage;
@@ -25,7 +25,11 @@ import se.laz.casual.network.protocol.messages.transaction.CasualTransactionReso
 import se.laz.casual.network.protocol.messages.transaction.CasualTransactionResourcePrepareRequestMessage;
 import se.laz.casual.network.protocol.messages.transaction.CasualTransactionResourceRollbackRequestMessage;
 
+import java.lang.System.Logger;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+
+import static java.lang.System.Logger.Level.DEBUG;
 
 @ApplicationScoped
 @ResourceEndpoint
@@ -38,49 +42,49 @@ public class CasualMessageEndpoint implements CasualMessageListener
     @Override
     public void domainConnectRequest(CasualNWMessage<CasualDomainConnectRequestMessage> message, Channel channel, Consumer<ProtocolVersion> protocolVersion)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received domain connect request" + message);
+        LOG.log(DEBUG, () -> "Received domain connect request" + message);
         delegate.domainConnectRequest(message, channel, protocolVersion);
     }
 
     @Override
     public void domainDisconnectReply(CasualNWMessage<DomainDisconnectReplyMessage> message)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received domain disconnect reply" + message);
+        LOG.log(DEBUG, () -> "Received domain disconnect reply" + message);
         delegate.domainDisconnectReply(message);
     }
 
     @Override
     public void domainDiscoveryRequest(CasualNWMessage<CasualDomainDiscoveryRequestMessage> message, Channel channel, ProtocolVersion protocolVersion)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received domain discovery request" + message);
+        LOG.log(DEBUG, () -> "Received domain discovery request" + message);
         delegate.domainDiscoveryRequest(message, channel, protocolVersion);
     }
 
     @Override
     public void serviceCallRequest(CasualNWMessage<CasualServiceCallRequestMessage> message, Channel channel, WorkManager workManager, CasualInboundTransactionRegistry inboundTransactionRegistry, ProtocolVersion protocolVersion)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received service call request" + message);
+        LOG.log(DEBUG, () -> "Received service call request" + message);
         delegate.serviceCallRequest(message, channel, workManager, inboundTransactionRegistry, protocolVersion);
     }
 
     @Override
     public void prepareRequest(CasualNWMessage<CasualTransactionResourcePrepareRequestMessage> message, Channel channel, XATerminator xaTerminator, CasualInboundTransactionRegistry inboundTransactionRegistry)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received prepare request" + message);
+        LOG.log(DEBUG, () -> "Received prepare request" + message);
         delegate.prepareRequest(message, channel, xaTerminator, inboundTransactionRegistry);
     }
 
     @Override
     public void commitRequest(CasualNWMessage<CasualTransactionResourceCommitRequestMessage> message, Channel channel, XATerminator xaTerminator, CasualInboundTransactionRegistry inboundTransactionRegistry)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received commit request" + message);
+        LOG.log(DEBUG, () -> "Received commit request" + message);
         delegate.commitRequest(message, channel, xaTerminator, inboundTransactionRegistry);
     }
 
     @Override
     public void requestRollback(CasualNWMessage<CasualTransactionResourceRollbackRequestMessage> message, Channel channel, XATerminator xaTerminator, CasualInboundTransactionRegistry inboundTransactionRegistry)
     {
-        LOG.log(Logger.Level.DEBUG, () -> "Received rollback request" + message);
+        LOG.log(DEBUG, () -> "Received rollback request" + message);
         delegate.requestRollback(message, channel, xaTerminator, inboundTransactionRegistry);
     }
 }

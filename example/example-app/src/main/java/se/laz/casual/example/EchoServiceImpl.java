@@ -6,6 +6,7 @@
 package se.laz.casual.example;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import se.laz.casual.api.service.CasualService;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
@@ -17,6 +18,7 @@ import se.laz.casual.jca.inbound.handler.InboundResponse;
 public class EchoServiceImpl implements EchoService
 {
     @CasualService(name = "echo", category = "example")
+    @Transactional(Transactional.TxType.REQUIRED)
     @Override
     public InboundResponse echo(InboundRequest request)
     {

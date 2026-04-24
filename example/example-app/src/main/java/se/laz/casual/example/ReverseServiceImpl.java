@@ -6,6 +6,7 @@
 package se.laz.casual.example;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import se.laz.casual.api.buffer.type.OctetBuffer;
 import se.laz.casual.api.service.CasualService;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
@@ -20,6 +21,7 @@ import java.util.List;
 public class ReverseServiceImpl implements ReverseService
 {
     @CasualService(name = "reverse", category = "example")
+    @Transactional(Transactional.TxType.REQUIRED)
     @Override
     public InboundResponse reverse(InboundRequest request) {
         List<byte[]> payload = request.getBuffer().getBytes();

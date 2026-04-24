@@ -19,7 +19,6 @@
             ]
         }       
     },
-  ]
     "eventServer":{
         "portNumber": 7896,
         "useEpoll": true

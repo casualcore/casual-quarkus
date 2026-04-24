@@ -1,6 +1,6 @@
 //-*- coding: utf-8-unix -*-
 def gson_version = '2.13.1'
-def casual_version = '3.4.4-SNAPSHOT'
+def casual_version = '3.4.5-SNAPSHOT'
 
 ext.libs = [
     casual_api: "se.laz.casual:casual-api:${casual_version}",

@@ -197,6 +197,63 @@ This since the handlers are found during build time of the user application.
 There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
 Note, it needs a reverse outbound to connect to and currently only casual cam provide that.
 
+## XA note for quarkus
+
+At REST endpoints and at exposed java services `@CasualService`:
+@Transactional(Transactional.TxType.REQUIRED)
+
+
+## Performance Tuning for Quarkus
+
+To achieve the best results with Casual JCA in Quarkus, we recommend the following configuration based on example app soak tests:
+
+* Virtual Threads: Enable them! It allows the extension to handle thousands of concurrent requests without the memory overhead of platform threads.
+
+* The Acquisition Bridge: If you see "Pinned Thread" warnings, ensure getConnection() is called via a platform executor (like Infrastructure.getDefaultExecutor()) to keep the IronJacamar pool logic away from the Virtual Thread carrier threads.
+
+* Logical vs. Physical Connections: Don't be afraid to set a high JCA max-pool-size (e.g., 1000+). Because Casual JCA multiplexes over a few physical Netty connections, these "connections" are just lightweight logical handles.
+
+* Transaction Reaper: Under extreme soak testing, give Narayana a bit more breathing room by increasing the default-timeout to account for high-concurrency network spikes.
+
+Example app soak test results:
+```sh
+$for c in 10 50 100 200 300 500 1000; do   echo "=== Concurrency: $c ===";   ab -n 5000 -c $c -k -q  -p ./sum.json -T 'application/casual-x-octet' http://localhost:8080/casual/sum?bufferType=.json/ 2>&1 | grep -E "Requests per second|Concurrency Level|Time taken for tests";   echo;   sleep 2; done
+=== Concurrency: 10 ===
+Concurrency Level:      10
+Time taken for tests:   2.647 seconds
+Requests per second:    1888.94 [#/sec] (mean)
+
+=== Concurrency: 50 ===
+Concurrency Level:      50
+Time taken for tests:   1.007 seconds
+Requests per second:    4963.49 [#/sec] (mean)
+
+=== Concurrency: 100 ===
+Concurrency Level:      100
+Time taken for tests:   0.815 seconds
+Requests per second:    6137.26 [#/sec] (mean)
+
+=== Concurrency: 200 ===
+Concurrency Level:      200
+Time taken for tests:   0.774 seconds
+Requests per second:    6459.14 [#/sec] (mean)
+
+=== Concurrency: 300 ===
+Concurrency Level:      300
+Time taken for tests:   0.647 seconds
+Requests per second:    7727.75 [#/sec] (mean)
+
+=== Concurrency: 500 ===
+Concurrency Level:      500
+Time taken for tests:   0.411 seconds
+Requests per second:    12152.53 [#/sec] (mean)
+
+=== Concurrency: 1000 ===
+Concurrency Level:      1000
+Time taken for tests:   0.400 seconds
+Requests per second:    12486.58 [#/sec] (mean)
+```
+
 
 ## Architecture
 

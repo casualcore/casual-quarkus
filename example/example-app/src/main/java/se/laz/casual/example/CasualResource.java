@@ -7,7 +7,9 @@ package se.laz.casual.example;
 
 import io.smallrye.common.annotation.Identifier;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
@@ -40,11 +42,15 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+
+import static java.lang.System.Logger.Level.ERROR;
 
 @Path("/casual")
 public class CasualResource
 {
+    private static final System.Logger LOG = System.getLogger(CasualResource.class.getName());
     CasualConnectionFactory casualOne;
 
     @Inject
@@ -56,6 +62,7 @@ public class CasualResource
     @POST
     @Consumes("application/casual-x-octet")
     @Path("{serviceName}")
+    @Transactional(Transactional.TxType.REQUIRED)
     public Uni<Response> serviceRequest(
             @PathParam("serviceName") String serviceName,
             @DefaultValue("X_OCTET/")
@@ -70,6 +77,8 @@ public class CasualResource
             return Uni.createFrom().completionStage(
                               () -> makeServiceCallAsync(serviceName, buffer, flags)
                       )
+                      // Important: this ensures Narayana's commit() doesn't happen on the Netty thread (which would deadlock)
+                      .emitOn(Infrastructure.getDefaultWorkerPool())
                       .map(value -> Response.ok().entity(value.getBytes().get(0)).build())
                       .onFailure().recoverWithItem(this::buildErrorResponse);
         }
@@ -81,6 +90,7 @@ public class CasualResource
 
     @GET
     @Path("simpleObject")
+    @Transactional(Transactional.TxType.REQUIRED)
     public Uni<Response> simpleObject(
             @QueryParam("id") Long id,
             @QueryParam("name") String name)
@@ -91,6 +101,8 @@ public class CasualResource
         return Uni.createFrom().completionStage(
                           () -> makeServiceCallAsync("echoFielded", buffer, flags)
                   )
+                  // Important: this ensures Narayana's commit() doesn't happen on the Netty thread (which would deadlock)
+                  .emitOn(Infrastructure.getDefaultWorkerPool())
                   .map(value -> {
                       ServiceBuffer serviceBuffer = (ServiceBuffer) value;
                       CasualBufferType bufferType = CasualBufferType.unmarshall(serviceBuffer.getType());
@@ -117,37 +129,37 @@ public class CasualResource
         };
     }
 
-    private CompletionStage<CasualBuffer> makeServiceCallAsync(String serviceName, CasualBuffer buffer, Flag<AtmiFlags> flags)
-    {
-        try
-        {
-            try (CasualConnection connection = casualOne.getConnection())
-            {
-                return connection.tpacall(serviceName, buffer, flags)
-                                 .thenApply(replyOpt -> {
-                                     ServiceReturn<CasualBuffer> reply = replyOpt.orElseThrow(
-                                             () -> new RuntimeException("No reply received from service " + serviceName)
-                                     );
-
-                                     if (reply.getServiceReturnState() == ServiceReturnState.TPSUCCESS)
-                                     {
-                                         return reply.getReplyBuffer();
-                                     }
-                                     else
-                                     {
-                                         throw new CasualRuntimeException("tpcall failed: " + reply.getErrorState());
-                                     }
-                                 });
-            }
-        }
-        catch (Exception e)
-        {
-            // Any synchronous error (e.g. reading InputStream) becomes a failed CompletionStage
-            CompletableFuture<CasualBuffer> failed = new CompletableFuture<>();
-            failed.completeExceptionally(e);
-            return failed;
-        }
+    private CompletionStage<CasualBuffer> makeServiceCallAsync(String serviceName, CasualBuffer buffer, Flag<AtmiFlags> flags) {
+        // We use supplyAsync to jump onto a Platform Thread immediately
+        return CompletableFuture.supplyAsync(() -> {
+                                    try {
+                                        // This is the blocking/pinning-prone JCA call
+                                        return casualOne.getConnection();
+                                    } catch (Exception e) {
+                                        // If the pool is exhausted or throws, we wrap it
+                                        throw new CompletionException(e);
+                                    }
+                                }, Infrastructure.getDefaultExecutor())
+                                .thenCompose(connection -> {
+                                    // Now we are back in the async world with a valid connection
+                                    return connection.tpacall(serviceName, buffer, flags)
+                                                     .handle((reply, err) -> {
+                                                         // ALWAYS close the connection handle, even on failure
+                                                         try {
+                                                             connection.close();
+                                                         } catch (Exception e) {
+                                                             LOG.log(ERROR, () -> "Failed to close JCA connection", e);
+                                                         }
+                                                         if (err != null) {
+                                                             throw (err instanceof CompletionException) ?
+                                                                     (CompletionException)err : new CompletionException(err);
+                                                         }
+                                                         return reply.orElseThrow(() -> new CasualRuntimeException("No reply"))
+                                                                     .getReplyBuffer();
+                                                     });
+                                });
     }
+
 
     private Response buildErrorResponse(Throwable failure)
     {

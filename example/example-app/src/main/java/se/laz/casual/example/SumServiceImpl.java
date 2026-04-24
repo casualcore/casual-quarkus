@@ -1,6 +1,7 @@
 package se.laz.casual.example;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
 import se.laz.casual.api.service.CasualService;
 
 import java.util.Arrays;
@@ -9,6 +10,7 @@ import java.util.Arrays;
 public class SumServiceImpl implements SumService
 {
     @Override
+    @Transactional(Transactional.TxType.REQUIRED)
     @CasualService(name = "sum", category = "example")
     public int sum(int[] numbers)
     {
