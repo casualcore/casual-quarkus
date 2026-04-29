@@ -16,25 +16,30 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.System.Logger.Level.INFO;
+
 /**
  * A very simple JsonBufferHandler for use with the sum service
  */
 public class JsonBufferHandler implements BufferHandler
 {
+    private static final System.Logger LOG = System.getLogger(JsonBufferHandler.class.getName());
     @Override
     public Priority getPriority()
     {
-        return Priority.LEVEL_3;
+        return Priority.LEVEL_0;
     }
     @Override
     public boolean canHandleBuffer(String bufferType)
     {
+        LOG.log(INFO, () -> "JsonBufferHandler::canHandleBuffer " + bufferType);
         return CasualBufferType.JSON.getName().equalsIgnoreCase(bufferType);
     }
 
     @Override
     public ServiceCallInfo fromRequest(InboundRequestInfo requestInfo, InboundRequest request)
     {
+        LOG.log(INFO, () -> "JsonBufferHandler::fromRequest " + requestInfo + " " + request);
         Method method = requestInfo.getRealMethod().orElseThrow(() -> new CasualRuntimeException("real method is missing"));
         JsonBuffer buffer = JsonBuffer.of(request.getBuffer().getBytes());
         String json = buffer.toString();
@@ -58,6 +63,7 @@ public class JsonBufferHandler implements BufferHandler
     @Override
     public InboundResponse toResponse(ServiceCallInfo info, Object result)
     {
+        LOG.log(INFO, () -> "JsonBufferHandler::toResponse " + info + " " + result);
         Map<String, Object> wrapper = new HashMap<>();
         wrapper.put("result", result);
         return InboundResponse.createBuilder()

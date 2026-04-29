@@ -65,6 +65,6 @@ public class ExampleServiceHandlerExtension implements ServiceHandlerExtension
     @Override
     public Priority getPriority()
     {
-        return Priority.LEVEL_4;
+        return Priority.LEVEL_0;
     }
 }

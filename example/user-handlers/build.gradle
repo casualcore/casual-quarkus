@@ -1,6 +1,10 @@
+//-*- coding: utf-8-unix -*-
 plugins {
     id 'java'
     id 'io.quarkus'
+    // needed to create jandex index
+    // used for SPI
+    id 'org.kordamp.gradle.jandex' version '2.0.0'
 }
 
 dependencies {

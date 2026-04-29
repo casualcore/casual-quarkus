@@ -53,6 +53,6 @@ public class ExampleServiceHandler implements ServiceHandler
     public Priority getPriority()
     {
         // lower than CasualQuarkusServiceHandler
-        return Priority.LEVEL_3;
+        return Priority.LEVEL_0;
     }
 }
