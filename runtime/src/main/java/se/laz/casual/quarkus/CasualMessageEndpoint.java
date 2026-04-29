@@ -9,7 +9,6 @@ import io.netty.channel.Channel;
 import io.quarkiverse.ironjacamar.ResourceEndpoint;
 import io.smallrye.common.annotation.Identifier;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.resource.spi.XATerminator;
 import jakarta.resource.spi.work.WorkManager;
 import se.laz.casual.api.network.protocol.messages.CasualNWMessage;
@@ -26,7 +25,6 @@ import se.laz.casual.network.protocol.messages.transaction.CasualTransactionReso
 import se.laz.casual.network.protocol.messages.transaction.CasualTransactionResourceRollbackRequestMessage;
 
 import java.lang.System.Logger;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
 import static java.lang.System.Logger.Level.DEBUG;

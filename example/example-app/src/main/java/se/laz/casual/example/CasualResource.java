@@ -22,7 +22,6 @@ import org.apache.commons.io.IOUtils;
 import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.CasualBuffer;
 import se.laz.casual.api.buffer.CasualBufferType;
-import se.laz.casual.api.buffer.ServiceReturn;
 import se.laz.casual.api.buffer.type.CStringBuffer;
 import se.laz.casual.api.buffer.type.JsonBuffer;
 import se.laz.casual.api.buffer.type.OctetBuffer;
@@ -32,8 +31,6 @@ import se.laz.casual.api.buffer.type.fielded.marshalling.FieldedTypeBufferProces
 import se.laz.casual.api.flags.AtmiFlags;
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.Flag;
-import se.laz.casual.api.flags.ServiceReturnState;
-import se.laz.casual.jca.CasualConnection;
 import se.laz.casual.jca.CasualConnectionFactory;
 
 import java.io.IOException;
@@ -141,19 +138,23 @@ public class CasualResource
                                         throw new CompletionException(e);
                                     }
                                 }, Infrastructure.getDefaultExecutor())
-                                .thenCompose(connection -> {
+                                .thenCompose(connection ->
                                     // Now we are back in the async world with a valid connection
-                                    return connection.tpacall(serviceName, buffer, flags)
+                                        connection.tpacall(serviceName, buffer, flags)
                                                      .handle((reply, err) -> {
                                                          // ALWAYS close the connection handle, even on failure
-                                                         try {
+                                                         try
+                                                         {
                                                              connection.close();
-                                                         } catch (Exception e) {
+                                                         }
+                                                         catch (Exception e)
+                                                         {
                                                              LOG.log(ERROR, () -> "Failed to close JCA connection", e);
                                                          }
-                                                         if (err != null) {
-                                                             throw (err instanceof CompletionException) ?
-                                                                     (CompletionException)err : new CompletionException(err);
+                                                         if (err != null)
+                                                         {
+                                                             throw (err instanceof CompletionException completionexception) ?
+                                                                     completionexception : new CompletionException(err);
                                                          }
                                                          reply.ifPresent(r -> {
                                                             if(r.getErrorState() != ErrorState.OK){
@@ -162,8 +163,7 @@ public class CasualResource
                                                          });
                                                          return reply.orElseThrow(() -> new CasualRuntimeException("No reply"))
                                                                      .getReplyBuffer();
-                                                     });
-                                });
+                                                     }));
     }
 
 

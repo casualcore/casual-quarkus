@@ -10,7 +10,6 @@ import se.laz.casual.network.messages.domain.TransactionType;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static se.laz.casual.network.messages.domain.TransactionType.ATOMIC;
