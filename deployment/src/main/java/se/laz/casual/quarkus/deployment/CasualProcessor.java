@@ -61,6 +61,9 @@ class CasualProcessor
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-inbound-handler-fielded-buffer"));
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-json-provider-gson"));
         index.produce(new IndexDependencyBuildItem("com.google.code.gson", "gson"));
+        // casual caller
+        index.produce(new IndexDependencyBuildItem("se.laz.casual", "casual-caller"));
+        index.produce(new IndexDependencyBuildItem("se.laz.casual", "casual-caller-http-client"));
     }
 
     @BuildStep
@@ -72,6 +75,39 @@ class CasualProcessor
             "se.laz.casual.quarkus.CasualQuarkusServiceRegistry"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
             "se.laz.casual.quarkus.CasualMessageEndpoint"));
+        // casual caller
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.connection.caller.CasualCallerImpl"));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.connection.caller.TransactionLess"));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.http.HttpClient"));
+    }
+
+    @BuildStep
+    void registerCasualCallerBeans(CombinedIndexBuildItem combinedIndex,
+                                   BuildProducer<AdditionalBeanBuildItem> additionalBeans)
+    {
+        IndexView index = combinedIndex.getIndex();
+        DotName inject = DotName.createSimple("jakarta.inject.Inject");
+
+        // Register all casual-caller classes that have @Inject constructors
+        for (AnnotationInstance ann : index.getAnnotations(inject))
+        {
+            if (ann.target().kind() == AnnotationTarget.Kind.METHOD
+                    && ann.target().asMethod().isConstructor())
+            {
+                String className = ann.target().asMethod().declaringClass().name().toString();
+                if (className.startsWith("se.laz.casual.connection.caller") || className.startsWith("se.laz.casual.http"))
+                {
+                    additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(className));
+                }
+            }
+        }
+
+        // Beans without @Inject that are still CDI-managed (no-arg constructor, no scope annotation)
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.connection.caller.Lookup"));
     }
 
     @BuildStep

@@ -6,6 +6,8 @@ plugins {
 
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation libs.casual_caller_api
+    implementation libs.casual_caller
     // simple json buffer handler
     implementation project(':json-buffer-handler')
     // remove comment to see that we then make use of the user handlers in this application
@@ -14,7 +16,9 @@ dependencies {
     // you should run ../gradlew clean build publishToMavenLocal first
     implementation libs.casual_quarkus
     implementation libs.commons_io
-
+    // for jakarta.ws.rs.client.ClientBuilder
+    implementation 'io.quarkus:quarkus-rest-client'
+    
     runtimeOnly libs.gson
 
     testImplementation 'io.quarkus:quarkus-junit5'

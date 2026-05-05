@@ -1,6 +1,7 @@
 //-*- coding: utf-8-unix -*-
 def gson_version = '2.13.1'
 def casual_version = '3.4.2'
+def casual_caller_version = '3.3.3-SNAPSHOT'
 def casual_quarkus_version = '1.0.0'
 
 ext.libs = [
@@ -8,6 +9,8 @@ ext.libs = [
     casual_api: "se.laz.casual:casual-api:${casual_version}",
     casual_inbound_handler_fielded_buffer: "se.laz.casual:casual-inbound-handler-fielded-buffer:${casual_version}",
     casual_api_spi_impl: "se.laz.casual:casual-api-spi-impl:${casual_version}",
+    casual_caller: "se.laz.casual:casual-caller:${casual_caller_version}",
+    casual_caller_api: "se.laz.casual:casual-caller-api:${casual_caller_version}",
     gson: "com.google.code.gson:gson:${gson_version}",
     commons_io: 'commons-io:commons-io:2.11.0'
 ]

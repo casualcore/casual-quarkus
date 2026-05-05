@@ -1,6 +1,7 @@
 //-*- coding: utf-8-unix -*-
 def gson_version = '2.13.1'
 def casual_version = '3.4.5-SNAPSHOT'
+def casual_caller_version = '3.3.3-SNAPSHOT'
 
 ext.libs = [
     casual_api: "se.laz.casual:casual-api:${casual_version}",
@@ -14,6 +15,9 @@ ext.libs = [
     casual_network_protocol: "se.laz.casual:casual-network-protocol:${casual_version}",
     casual_network: "se.laz.casual:casual-network:${casual_version}",
     casual_internal: "se.laz.casual:casual-internal:${casual_version}",
+    casual_caller: "se.laz.casual:casual-caller:${casual_caller_version}",
+    casual_caller_api: "se.laz.casual:casual-caller-api:${casual_caller_version}",
+    casual_caller_http_client: "se.laz.casual:casual-caller-http-client:${casual_caller_version}",
     gson: "com.google.code.gson:gson:${gson_version}",
     commons_io: 'commons-io:commons-io:2.11.0',
     // for spock

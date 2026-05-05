@@ -32,6 +32,7 @@ dependencies {
     api libs.casual_inbound_api
     api libs.casual_inbound_handler_api
     api libs.casual_jca
+    api libs.casual_caller_api
 
     // Implementation-only casual libraries
     implementation libs.casual_inbound
@@ -41,6 +42,7 @@ dependencies {
     implementation libs.casual_network
     implementation libs.casual_internal
     implementation libs.casual_api_spi_impl
+    implementation libs.casual_caller
 
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
 
