@@ -8,7 +8,7 @@ This document details how the Casual Quarkus JCA extension orchestrates a transa
 
 Distributed XA transactions require strict synchronization via the transaction coordinator (Narayana). When an application is terminated under heavy load, terminating the JVM immediately or blindly cutting network sockets will cause in-doubt transactions and database anomalies.
 
-To prevent this, the Casual extension implements a two-phase graceful shutdown mechanism hooked into the Quarkus lifecycle. 
+To prevent this, the Casual extension implements a graceful shutdown mechanism hooked into the Quarkus lifecycle. 
 
 It ensures that:
 
