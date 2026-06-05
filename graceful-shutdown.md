@@ -37,7 +37,7 @@ When a SIGTERM is issued to an application, the following sequential phases are 
  │       - Late packets already physically in-flight on the network wire land safely.
  │
  ├── 3. Transaction Draining Phase (Dynamic: Up to the remainder of the 30s window - or what you set `quarkus.shutdown.delay` to)
- │   └── The ShutdownBarrier wakes up and actively polls internal registries.
+ │   └── The ShutdownBarrier actively polls internal registries.
  │       - Pending transactions in the Inbound/Outbound registries are allowed to finish.
  │       - Any accidental late outbound service calls are instantly rejected with TPENOENT.
  │
