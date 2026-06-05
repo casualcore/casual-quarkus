@@ -12,5 +12,8 @@ pluginManagement {
 rootProject.name='casual-quarkus-example'
 
 include 'example-app'
+include 'front-app'
+include 'node-app'
+include 'db-app'
 include 'user-handlers'
 include 'json-buffer-handler'

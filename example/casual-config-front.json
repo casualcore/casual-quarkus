@@ -1,0 +1,17 @@
+{
+    "domain": {
+        "name": "quarkus-casual-front"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "inbound": {
+        "useEpoll": true   
+    },
+    "eventServer":{
+        "portNumber": 7694,
+        "useEpoll": true
+    }
+}
