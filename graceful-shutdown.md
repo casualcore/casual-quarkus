@@ -27,7 +27,7 @@ When a SIGTERM is issued to an application, the following sequential phases are 
 ```text
 [ SIGTERM Received ]
  │
- ├── 1. Sets the application as disconnecting.
+ ├── 1. Sets the application as disconnecting - any new outbound call from the application returns TPENOENT.
  │   └── Application broadcasts a Domain Disconnect message to all connected clients.
  │
  ├── 2. Wire-Settle Phase (Fixed Pause: Default 1500ms)
