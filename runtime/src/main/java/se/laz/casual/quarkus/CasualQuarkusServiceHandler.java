@@ -24,6 +24,7 @@ import se.laz.casual.spi.Priority;
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.WARNING;
@@ -39,6 +40,17 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
 {
     private interface CasualMarkerInterface {}
     private static final Logger LOG = System.getLogger(CasualQuarkusServiceHandler.class.getName());
+    private static final AtomicInteger IN_FLIGHT = new AtomicInteger(0);
+
+    public static boolean hasInFlight()
+    {
+        return IN_FLIGHT.get() > 0;
+    }
+
+    public static int inFlightCount()
+    {
+        return IN_FLIGHT.get();
+    }
 
     /**
      * Higher priority than default CasualServiceHandler (LEVEL_5)
@@ -72,6 +84,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public InboundResponse invokeService(InboundRequest request)
     {
+        IN_FLIGHT.incrementAndGet();
         var contextClassLoader = Thread.currentThread().getContextClassLoader();
         try
         {
@@ -148,6 +161,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
         finally
         {
             Thread.currentThread().setContextClassLoader(contextClassLoader);
+            IN_FLIGHT.decrementAndGet();
         }
     }
 

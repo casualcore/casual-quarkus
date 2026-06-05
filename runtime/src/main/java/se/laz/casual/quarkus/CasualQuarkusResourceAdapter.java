@@ -12,11 +12,16 @@ import jakarta.resource.spi.ResourceAdapter;
 import jakarta.resource.spi.ResourceAdapterInternalException;
 import jakarta.resource.spi.endpoint.MessageEndpointFactory;
 import se.laz.casual.jca.CasualResourceAdapter;
+import se.laz.casual.jca.CasualResourceManager;
+import se.laz.casual.jca.Predicate;
+import se.laz.casual.jca.RuntimeInformation;
+import se.laz.casual.jca.ShutdownBarrier;
 
 import javax.transaction.xa.XAResource;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.System.Logger;
+
 
 /**
  * Wrapper for CasualResourceAdapter
@@ -68,7 +73,7 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     {
         // endpointActivation is not called for some reason
         // we really want to do that before stopping the RA
-        endpointDeactivation(endpointFactory, activationSpec);
+        //endpointDeactivation(endpointFactory, activationSpec);
         delegate.stop();
     }
 
@@ -90,11 +95,18 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     @Override
     public void endpointDeactivation(MessageEndpointFactory endpointFactory, ActivationSpec spec)
     {
-        // we guard so that this is only being executed once - regardless how many outbound pools
-        // that are configured
+        // we guard so that this is only being executed once - regardless of how many outbound pools
+        // that are configured - since we only have one inbound server running regardless of how many outbound pools there are
+        RuntimeInformation.setDomainIsBeingShutdown(true);
         if (INBOUND_ACTIVE.decrementAndGet() == 0)
         {
-            LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint");
+            LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint, waiting for in-flight service calls to complete");
+            Predicate predicate = () -> CasualQuarkusServiceHandler.hasInFlight() || CasualResourceManager.getInstance().hasPending();
+            long sleepTimeMilliseconds = 20L;
+            ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(sleepTimeMilliseconds, predicate);
+            LOG.log(Logger.Level.INFO, () -> "Waiting for " + CasualQuarkusServiceHandler.inFlightCount() + " in-flight service call(s) to complete");
+            shutdownBarrier.intermittentSleep();
+            LOG.log(Logger.Level.INFO, () -> "continuing shutdown procedure");
             delegate.endpointDeactivation(endpointFactory, activationSpec);
         }
     }

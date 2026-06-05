@@ -25,7 +25,7 @@ test{
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     api 'io.quarkus:quarkus-arc'
-    api 'io.quarkiverse.ironjacamar:quarkus-ironjacamar:1.7.2'
+    api 'io.quarkiverse.ironjacamar:quarkus-ironjacamar:1.8.1'
 
     // Casual libraries - api scope for types exposed to consumers
     api libs.casual_api
@@ -44,6 +44,8 @@ dependencies {
     implementation libs.casual_api_spi_impl
     implementation libs.casual_caller
 
+    implementation 'io.quarkus:quarkus-scheduler'
+    
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
 
     testImplementation platform(libs.groovy_bom)

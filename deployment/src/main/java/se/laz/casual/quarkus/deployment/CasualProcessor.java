@@ -75,6 +75,10 @@ class CasualProcessor
             "se.laz.casual.quarkus.CasualQuarkusServiceRegistry"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
             "se.laz.casual.quarkus.CasualMessageEndpoint"));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.quarkus.QuarkusConnectionFactoryEntryValidationTimer"));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.quarkus.QuarkusTopologyChangedHandler"));
         // casual caller
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
                 "se.laz.casual.connection.caller.CasualCallerImpl"));

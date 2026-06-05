@@ -11,7 +11,6 @@ import jakarta.inject.Inject;
 import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.connection.caller.ConnectionFactoryEntry;
 import se.laz.casual.connection.caller.ConnectionFactoryFinder;
-import se.laz.casual.connection.caller.ConnectionFactoryProducer;
 import se.laz.casual.jca.CasualConnectionFactory;
 
 import java.util.List;
@@ -41,25 +40,8 @@ public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
                                                               .findFirst()
                                                               .orElseThrow(() -> new CasualRuntimeException("Pool name is missing for: " + handle.get() + ""));
                                       CasualConnectionFactory cf = handle.get();
-                                      return createConnectionFactoryEntry(cf, poolName);
+                                      return ConnectionFactoryEntry.of(QuarkusConnectionFactoryProducer.of(poolName, cf));
                                   })
                                   .toList();
-    }
-
-    private ConnectionFactoryEntry createConnectionFactoryEntry(CasualConnectionFactory cf, String poolName)
-    {
-        ConnectionFactoryProducer producer = new ConnectionFactoryProducer(){
-            @Override
-            public String getUniqueName()
-            {
-                return poolName;
-            }
-            @Override
-            public CasualConnectionFactory getConnectionFactory()
-            {
-                return cf;
-            }
-        };
-        return ConnectionFactoryEntry.of(producer);
     }
 }

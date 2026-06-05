@@ -31,6 +31,8 @@ nb-configuration.xml
 # emacs
 *~
 *.orig
+\#*\#
+[#]*[#]
 
 # patch
 *.orig
@@ -43,3 +45,14 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+# H2 in example subproject
+ObjectStore/
+
+*.log
+dump*
+secret.*
+
+*.class
+*.jar
+
