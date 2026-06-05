@@ -12,7 +12,7 @@ To prevent this, the Casual extension implements a graceful shutdown mechanism h
 
 It ensures that:
 
-* Any connected client is proactively notified to stop routing new traffic to the degrading application.
+* Any connected client is notified to stop routing new traffic to the degrading application.
 
 * The network wire is allowed to settle.
 
