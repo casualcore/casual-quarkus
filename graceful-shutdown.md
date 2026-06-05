@@ -18,7 +18,7 @@ It ensures that:
 
 * In-flight XA transactions are given maximum time to finish their Two-Phase Commit (2PC) cycles.
 
-* Late-arriving service requests are failed fast with TPENOENT without corrupting transaction states.
+* Late-arriving outbound, from the degrading application, service requests are failed fast with TPENOENT without corrupting transaction states.
 
 ## Timeline
 
