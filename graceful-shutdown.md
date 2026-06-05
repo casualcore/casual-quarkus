@@ -49,7 +49,7 @@ When a SIGTERM is issued to an application, the following sequential phases are 
 
 ### Shutdown starts
 
-* The application that is going down is set as `disconnecting` and any new outbound calls will return ```TPENOENT`` from the application without calling the actual resource.
+* The application that is going down is set as `disconnecting` and any new outbound calls will return `TPENOENT` from the application without calling the actual resource.
 * A domain disconnect is sent to all connected clients.
   When a client gets such a message, the state of the network connection is set to disconnecting.
   When a network connection is set as disconnecting, only `XA` calls are allowed to pass through, IE no service, queue calls etc are allowed.
