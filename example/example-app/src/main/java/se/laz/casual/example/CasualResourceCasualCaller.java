@@ -8,6 +8,8 @@ package se.laz.casual.example;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import jakarta.inject.Inject;
+import jakarta.transaction.SystemException;
+import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
@@ -40,23 +42,24 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
-import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.WARNING;
 
 @Path("/casualcaller")
 public class CasualResourceCasualCaller
 {
     private static final System.Logger LOG = System.getLogger(CasualResourceCasualCaller.class.getName());
     CasualCaller casualCaller;
+    TransactionManager transactionManager;
+
 
     @Inject
-    public CasualResourceCasualCaller(CasualCaller casualCaller)
+    public CasualResourceCasualCaller(CasualCaller casualCaller, TransactionManager transactionManager)
     {
-        LOG.log(INFO, () -> "casualcaller: " + casualCaller);
         this.casualCaller = casualCaller;
+        this.transactionManager = transactionManager;
     }
 
     @POST
@@ -67,6 +70,8 @@ public class CasualResourceCasualCaller
             @PathParam("serviceName") String serviceName,
             @DefaultValue("X_OCTET/")
             @QueryParam("bufferType") String bufferType,
+            @DefaultValue("1")
+            @QueryParam("numberOfCalls") Integer numberOfCalls,
             InputStream inputStream)
     {
         try
@@ -74,6 +79,13 @@ public class CasualResourceCasualCaller
             byte[] data = IOUtils.toByteArray(inputStream);
             Flag<AtmiFlags> flags = Flag.of(AtmiFlags.NOFLAG);
             CasualBuffer buffer = createBuffer(data, CasualBufferType.unmarshall(bufferType));
+            // if we should make more than 1 calls - we'll make n - 1 calls and only return the result of the last one
+            // why we would want to make multiple calls is to test transaction stickyness, that multiple calls in the same
+            // transaction stays on the same pool
+            while (numberOfCalls-- > 1)
+            {
+                casualCaller.tpacall(serviceName, buffer, flags).join();
+            }
             return Uni.createFrom().completionStage(
                               () -> makeServiceCallAsync(serviceName, buffer, flags)
                       )
@@ -84,6 +96,7 @@ public class CasualResourceCasualCaller
         }
         catch (IOException e)
         {
+            rollbackOnly();
             return Uni.createFrom().failure(e);
         }
     }
@@ -131,12 +144,8 @@ public class CasualResourceCasualCaller
 
     private CompletionStage<CasualBuffer> makeServiceCallAsync(String serviceName, CasualBuffer buffer, Flag<AtmiFlags> flags)
     {
-        return CompletableFuture.supplyAsync(
-                                        () -> casualCaller.tpacall(serviceName, buffer, flags),
-                                        Infrastructure.getDefaultExecutor())
-                                // flattens
-                                .thenCompose(f -> f)
-                                .handle(this::doHandle);
+        return casualCaller.tpacall(serviceName, buffer, flags)
+                           .handle(this::doHandle);
     }
 
     private CasualBuffer doHandle(Optional<ServiceReturn<CasualBuffer>> reply, Throwable err)
@@ -157,11 +166,27 @@ public class CasualResourceCasualCaller
 
     private Response buildErrorResponse(Throwable failure)
     {
+        rollbackOnly();
         StringWriter sw = new StringWriter();
         failure.printStackTrace(new PrintWriter(sw));
         return Response.serverError()
                        .entity(sw.toString())
                        .build();
+    }
+
+    private void rollbackOnly()
+    {
+        try
+        {
+            if (transactionManager.getTransaction() != null)
+            {
+                transactionManager.setRollbackOnly();
+            }
+        }
+        catch (SystemException e)
+        {
+            LOG.log(WARNING, "Failed to mark transaction for rollback", e);
+        }
     }
 
 }
