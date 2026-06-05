@@ -1,5 +1,8 @@
-
-
+/*
+ * Copyright (c) 2026, The casual project. All rights reserved.
+ *
+ * This software is licensed under the MIT license, https://opensource.org/licenses/MIT
+ */
 package se.laz.casual.quarkus;
 
 import jakarta.annotation.Priority;
@@ -12,9 +15,7 @@ import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.connection.caller.ConnectionFactoryEntry;
 import se.laz.casual.connection.caller.ConnectionFactoryFinder;
 import se.laz.casual.jca.CasualConnectionFactory;
-
 import java.util.List;
-
 
 @ApplicationScoped
 @Alternative
