@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.DEBUG;
 import static java.lang.System.Logger.Level.WARNING;
 
 @ApplicationScoped
@@ -44,14 +44,13 @@ public class QuarkusTopologyChangedHandler implements TopologyChangedHandler
       @Override
       public void setSupplier(Supplier<List<ConnectionFactoryEntry>> connectionFactoryEntrySupplier)
       {
-          LOG.log(INFO, "Setting connection factory entry supplier");
           this.connectionFactoryEntrySupplier = connectionFactoryEntrySupplier;
       }
 
       @Override
       public void topologyChanged(DomainId domainId)
       {
-          LOG.log(INFO, "topologyChanged: " + domainId);
+          LOG.log(DEBUG, "topologyChanged: " + domainId);
           pendingDomains.add(domainId);
       }
 

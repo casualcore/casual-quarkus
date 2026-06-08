@@ -29,9 +29,6 @@ import se.laz.casual.network.InboundTopologyUpdateContext;
  *   <li>A small wait period to allow clients to handle the domain disconnect message</li>
  *   <li>Waits for pending inbound XA transactions and pending outbound XA transactions to complete</li>
  * </ol>
- *
- * The remaining shutdown delay period then gives remote transaction managers time to
- * send prepare/commit for transactions whose service calls already completed.
  */
 @ApplicationScoped
 public class CasualShutdownDelayHandler
@@ -48,7 +45,7 @@ public class CasualShutdownDelayHandler
 
     void onShutdown(@Observes ShutdownDelayInitiatedEvent event)
     {
-        LOG.log(System.Logger.Level.INFO, "Shutdown initiated: beginning dynamic casual graceful shutdown");
+        LOG.log(System.Logger.Level.INFO, "Shutdown initiated: beginning casual graceful shutdown");
 
         // 1. Domaim going down, no new outbound service calls will be allowed
         //    They will all return TPENOENT
@@ -71,12 +68,11 @@ public class CasualShutdownDelayHandler
             Thread.currentThread().interrupt();
         }
 
+        // 4. Drain current in flight work
         Predicate workIsPending = () -> CasualInboundTransactionRegistry.hasPending()
                 || CasualResourceManager.getInstance().hasPending();
-
         ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(pollIntervalMs, workIsPending);
         shutdownBarrier.intermittentSleep();
-        LOG.log(System.Logger.Level.INFO, () -> "Casual graceful shutdown drain complete, "
-                + "remaining shutdown delay gives remote TMs time to complete 2PC");
+        LOG.log(System.Logger.Level.INFO, () -> "Casual graceful shutdown complete");
     }
 }

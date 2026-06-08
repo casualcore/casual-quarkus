@@ -24,7 +24,6 @@ public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
 {
     private static final System.Logger LOG = System.getLogger(CustomConnectionFactoryFinder.class.getName());
 
-    // get all configured outbound pools
     @Inject
     @Any
     Instance<CasualConnectionFactory> connectionFactories;
