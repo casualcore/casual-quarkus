@@ -16,6 +16,7 @@ import se.laz.casual.jca.CasualResourceManager;
 import se.laz.casual.jca.Predicate;
 import se.laz.casual.jca.RuntimeInformation;
 import se.laz.casual.jca.ShutdownBarrier;
+import se.laz.casual.jca.inflow.CasualInboundTransactionRegistry;
 
 import javax.transaction.xa.XAResource;
 import java.util.Map;
@@ -101,10 +102,9 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
         if (INBOUND_ACTIVE.decrementAndGet() == 0)
         {
             LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint, waiting for in-flight service calls to complete");
-            Predicate predicate = () -> CasualQuarkusServiceHandler.hasInFlight() || CasualResourceManager.getInstance().hasPending();
+            Predicate predicate = () -> CasualInboundTransactionRegistry.hasPending() || CasualResourceManager.getInstance().hasPending();
             long sleepTimeMilliseconds = 20L;
             ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(sleepTimeMilliseconds, predicate);
-            LOG.log(Logger.Level.INFO, () -> "Waiting for " + CasualQuarkusServiceHandler.inFlightCount() + " in-flight service call(s) to complete");
             shutdownBarrier.intermittentSleep();
             LOG.log(Logger.Level.INFO, () -> "continuing shutdown procedure");
             delegate.endpointDeactivation(endpointFactory, activationSpec);
