@@ -33,7 +33,7 @@ public class QuarkusTopologyChangedHandler implements TopologyChangedHandler
 
       private final Set<DomainId> pendingDomains = ConcurrentHashMap.newKeySet();
       private final CacheRepopulator cacheRepopulator;
-      private volatile Supplier<List<ConnectionFactoryEntry>> connectionFactoryEntrySupplier;
+      private Supplier<List<ConnectionFactoryEntry>> connectionFactoryEntrySupplier;
 
       @Inject
       public QuarkusTopologyChangedHandler(CacheRepopulator cacheRepopulator)

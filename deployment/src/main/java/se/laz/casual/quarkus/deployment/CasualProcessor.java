@@ -62,8 +62,8 @@ class CasualProcessor
         index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-json-provider-gson"));
         index.produce(new IndexDependencyBuildItem("com.google.code.gson", "gson"));
         // casual caller
-        index.produce(new IndexDependencyBuildItem("se.laz.casual", "casual-caller"));
-        index.produce(new IndexDependencyBuildItem("se.laz.casual", "casual-caller-http-client"));
+        index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-caller"));
+        index.produce(new IndexDependencyBuildItem(GROUP_NAME, "casual-caller-http-client"));
     }
 
     @BuildStep

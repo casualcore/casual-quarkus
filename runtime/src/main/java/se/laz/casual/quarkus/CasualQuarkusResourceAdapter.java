@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.System.Logger;
 
-
 /**
  * Wrapper for CasualResourceAdapter
  *
@@ -37,14 +36,11 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     private static final Logger LOG = System.getLogger(CasualQuarkusResourceAdapter.class.getName());
     private static final AtomicInteger INBOUND_ACTIVE = new AtomicInteger(0);
     // We only ever want to create one real RA
-    // This since it sets up the event server, inbound and reverse inbound
+    // This since it sets up the event server, inbound and reverse-inbound
     // All which should be done only once
     // Quarkus Ironjacamar creates one CasualQuarkusResourceAdapter per configured outbound pool
     private static final CasualResourceAdapter delegate = new CasualResourceAdapter();
     private Map<String, String> config;
-    // static since stop can be called on any of n number or RA instances
-    private static ActivationSpec activationSpec;
-    private static MessageEndpointFactory endpointFactory;
 
     public Map<String, String> getConfig()
     {
@@ -72,9 +68,6 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     @Override
     public void stop()
     {
-        // endpointActivation is not called for some reason
-        // we really want to do that before stopping the RA
-        //endpointDeactivation(endpointFactory, activationSpec);
         delegate.stop();
     }
 
@@ -87,8 +80,6 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
         if (INBOUND_ACTIVE.getAndIncrement() == 0)
         {
             LOG.log(Logger.Level.INFO, () -> "Activating inbound endpoint (first RA instance). spec:" + spec);
-            setActivationSpec(spec);
-            setEndpointFactory(factory);
             delegate.endpointActivation(factory, spec);
         }
     }
@@ -107,7 +98,7 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
             ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(sleepTimeMilliseconds, predicate);
             shutdownBarrier.intermittentSleep();
             LOG.log(Logger.Level.INFO, () -> "continuing shutdown procedure");
-            delegate.endpointDeactivation(endpointFactory, activationSpec);
+            delegate.endpointDeactivation(endpointFactory, spec);
         }
     }
 
@@ -115,16 +106,6 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     public XAResource[] getXAResources(ActivationSpec[] specs) throws ResourceException
     {
         return delegate.getXAResources(specs);
-    }
-
-    private static void setActivationSpec(ActivationSpec spec)
-    {
-        activationSpec = spec;
-    }
-
-    private static void setEndpointFactory(MessageEndpointFactory factory)
-    {
-        endpointFactory = factory;
     }
 
 }

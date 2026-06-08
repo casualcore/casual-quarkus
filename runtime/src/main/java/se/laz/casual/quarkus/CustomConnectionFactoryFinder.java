@@ -24,9 +24,14 @@ public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
 {
     private static final System.Logger LOG = System.getLogger(CustomConnectionFactoryFinder.class.getName());
 
-    @Inject
     @Any
     Instance<CasualConnectionFactory> connectionFactories;
+
+    @Inject
+    public CustomConnectionFactoryFinder(Instance<CasualConnectionFactory> connectionFactories)
+    {
+        this.connectionFactories = connectionFactories;
+    }
 
     @Override
     public List<ConnectionFactoryEntry> findConnectionFactory(String root)

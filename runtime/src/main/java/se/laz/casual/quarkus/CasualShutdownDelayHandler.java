@@ -34,18 +34,22 @@ import se.laz.casual.network.InboundTopologyUpdateContext;
 public class CasualShutdownDelayHandler
 {
     private static final System.Logger LOG = System.getLogger(CasualShutdownDelayHandler.class.getName());
-
-    @Inject
-    @ConfigProperty(name = "casual.shutdown.drain-poll-interval-ms", defaultValue = "200")
     long pollIntervalMs;
+    long wireSettleDelayMs;
 
     @Inject
-    @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "1500")
-    long wireSettleDelayMs;
+    public CasualShutdownDelayHandler(@ConfigProperty(name = "casual.shutdown.drain-poll-interval-ms", defaultValue = "200") long pollIntervalMs,
+                                      @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "1500") long wireSettleDelayMs)
+    {
+        this.pollIntervalMs = pollIntervalMs;
+        this.wireSettleDelayMs = wireSettleDelayMs;
+    }
 
     void onShutdown(@Observes ShutdownDelayInitiatedEvent event)
     {
         LOG.log(System.Logger.Level.INFO, "Shutdown initiated: beginning casual graceful shutdown");
+        LOG.log(System.Logger.Level.INFO, "wire settle delay: " + wireSettleDelayMs + "ms");
+        LOG.log(System.Logger.Level.INFO, "drain poll interval: " + pollIntervalMs + "ms");
 
         // 1. Domaim going down, no new outbound service calls will be allowed
         //    They will all return TPENOENT
@@ -63,7 +67,7 @@ public class CasualShutdownDelayHandler
         {
             Thread.sleep(wireSettleDelayMs);
         }
-        catch (InterruptedException e)
+        catch (InterruptedException _)
         {
             Thread.currentThread().interrupt();
         }

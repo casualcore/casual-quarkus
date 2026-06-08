@@ -22,9 +22,13 @@ import static java.lang.System.Logger.Level.TRACE;
 public class QuarkusConnectionFactoryEntryValidationTimer
 {
     private static final System.Logger LOG = System.getLogger(QuarkusConnectionFactoryEntryValidationTimer.class.getName());
+    ConnectionValidator connectionValidator;
 
     @Inject
-    ConnectionValidator connectionValidator;
+    public QuarkusConnectionFactoryEntryValidationTimer(ConnectionValidator connectionValidator)
+    {
+        this.connectionValidator = connectionValidator;
+    }
 
     @Scheduled(every = "${casual.validation.interval:1s}", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     void validateConnectionFactories()
