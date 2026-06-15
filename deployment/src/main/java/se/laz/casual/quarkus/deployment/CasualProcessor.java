@@ -112,6 +112,8 @@ class CasualProcessor
         // Beans without @Inject that are still CDI-managed (no-arg constructor, no scope annotation)
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
                 "se.laz.casual.connection.caller.Lookup"));
+        additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
+                "se.laz.casual.connection.caller.FailoverAlgorithm"));
 
         // needed for fat jar applications
         additionalBeans.produce(AdditionalBeanBuildItem.builder()

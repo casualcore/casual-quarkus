@@ -73,7 +73,7 @@ public class CasualShutdownDelayHandler
         }
 
         // 4. Drain current in flight work
-        Predicate workIsPending = () -> CasualInboundTransactionRegistry.hasPending()
+        Predicate workIsPending = () -> CasualQuarkusResourceAdapter.getInboundTransactionRegistry().hasPending()
                 || CasualResourceManager.getInstance().hasPending();
         ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(pollIntervalMs, workIsPending);
         shutdownBarrier.intermittentSleep();

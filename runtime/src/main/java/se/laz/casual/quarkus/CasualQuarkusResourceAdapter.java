@@ -20,6 +20,7 @@ import se.laz.casual.jca.inflow.CasualInboundTransactionRegistry;
 
 import javax.transaction.xa.XAResource;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.System.Logger;
 
@@ -50,6 +51,11 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     public void setConfig(Map<String, String> config)
     {
         this.config = config;
+    }
+
+    public static CasualInboundTransactionRegistry getInboundTransactionRegistry()
+    {
+        return delegate.getInboundTransactionRegistry().orElseThrow(() -> new IllegalStateException("Inbound transaction registry not initialized"));
     }
 
     @Override
@@ -93,7 +99,7 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
         if (INBOUND_ACTIVE.decrementAndGet() == 0)
         {
             LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint, waiting for in-flight service calls to complete");
-            Predicate predicate = () -> CasualInboundTransactionRegistry.hasPending() || CasualResourceManager.getInstance().hasPending();
+            Predicate predicate = () -> getInboundTransactionRegistry().hasPending() || CasualResourceManager.getInstance().hasPending();
             long sleepTimeMilliseconds = 20L;
             ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(sleepTimeMilliseconds, predicate);
             shutdownBarrier.intermittentSleep();
