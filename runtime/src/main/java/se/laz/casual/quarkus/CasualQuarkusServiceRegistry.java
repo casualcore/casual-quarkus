@@ -22,23 +22,7 @@ public class CasualQuarkusServiceRegistry
 {
     private static final Logger LOG = System.getLogger(CasualQuarkusServiceRegistry.class.getName());
 
-    private static CasualQuarkusServiceRegistry instance;
-
-    private static final Map<String, ServiceEntry> services = new ConcurrentHashMap<>();
-
-    public CasualQuarkusServiceRegistry()
-    {
-        LOG.log(INFO, () -> "=== CasualQuarkusServiceRegistry instance created ===");
-    }
-
-    public static CasualQuarkusServiceRegistry getInstance()
-    {
-        if(null == instance)
-        {
-            instance = new CasualQuarkusServiceRegistry();
-        }
-        return instance;
-    }
+    private final Map<String, ServiceEntry> services = new ConcurrentHashMap<>();
 
     public void registerService(ServiceEntry entry)
     {

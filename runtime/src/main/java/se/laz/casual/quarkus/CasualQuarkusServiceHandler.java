@@ -5,6 +5,7 @@
  */
 package se.laz.casual.quarkus;
 
+import io.quarkus.arc.Arc;
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.TransactionState;
 import se.laz.casual.api.service.CasualService;
@@ -33,7 +34,7 @@ import static java.lang.System.Logger.Level.WARNING;
  * This handler integrates with Casual's inbound infrastructure while using Quarkus's CDI.
  *
  * Note: This class is instantiated by ServiceLoader (SPI), so it cannot use CDI injection.
- * It accesses the registry via a static reference.
+ * It accesses the registry via Arc.container().
  */
 public class CasualQuarkusServiceHandler implements ServiceHandler
 {
@@ -49,7 +50,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public boolean canHandleService(String serviceName)
     {
-        CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
+        CasualQuarkusServiceRegistry registry = getRegistry();
         if (registry != null)
         {
             return registry.hasService(serviceName);
@@ -61,7 +62,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public boolean isServiceAvailable(String serviceName)
     {
-        CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
+        CasualQuarkusServiceRegistry registry = getRegistry();
         return registry != null && registry.hasService(serviceName);
     }
 
@@ -73,7 +74,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
         {
             Thread.currentThread().setContextClassLoader(CasualQuarkusServiceHandler.class.getClassLoader());
             String serviceName = request.getServiceName();
-            CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
+            CasualQuarkusServiceRegistry registry = getRegistry();
             if (registry == null)
             {
                 LOG.log(ERROR, () -> "CasualQuarkusServiceRegistry not initialized!");
@@ -150,7 +151,7 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
     @Override
     public ServiceInfo getServiceInfo(String serviceName)
     {
-        CasualQuarkusServiceRegistry registry = CasualQuarkusServiceRegistry.getInstance();
+        CasualQuarkusServiceRegistry registry = getRegistry();
         if (registry == null)
         {
             throw new IllegalStateException("CasualQuarkusServiceRegistry not initialized");
@@ -167,5 +168,11 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
                 serviceEntry.category(),
                 serviceEntry.transactionType()
         );
+    }
+
+    private CasualQuarkusServiceRegistry getRegistry()
+    {
+        var handle = Arc.container().instance(CasualQuarkusServiceRegistry.class);
+        return handle.isAvailable() ? handle.get() : null;
     }
 }

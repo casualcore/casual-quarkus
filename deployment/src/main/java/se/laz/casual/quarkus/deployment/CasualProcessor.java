@@ -186,7 +186,7 @@ class CasualProcessor
                 AnnotationValue value = txAnn.value();
                 //  defaults to REQUIRED as per:
                 //  https://jakarta.ee/specifications/transactions/2.0/apidocs/jakarta/transaction/transactional
-                transactionType = value.asEnum();
+                transactionType = value != null ? value.asEnum() : "REQUIRED";
             }
             unremovableBeans.produce(UnremovableBeanBuildItem.beanClassNames(className));
             MethodInfo method = annotation.target().asMethod();

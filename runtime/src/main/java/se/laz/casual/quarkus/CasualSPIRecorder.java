@@ -8,7 +8,6 @@ package se.laz.casual.quarkus;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.InstanceHandle;
 import io.quarkus.runtime.annotations.Recorder;
-import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.type.fielded.marshalling.FieldedMarshaller;
 import se.laz.casual.api.buffer.type.fielded.marshalling.FieldedTypeBufferProcessor;
 import se.laz.casual.jca.inbound.handler.buffer.BufferHandler;
@@ -59,7 +58,7 @@ public class CasualSPIRecorder
             }
             catch (Exception e)
             {
-                throw new CasualRuntimeException("Failed to register SPI " + item.implementationClass(), e);
+                throw new CasualSPIRegistrationException("Failed to register SPI " + item.implementationClass(), e);
             }
         }
     }

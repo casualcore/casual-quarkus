@@ -7,8 +7,6 @@ package se.laz.casual.quarkus;
 
 import io.quarkus.arc.runtime.BeanContainer;
 import io.quarkus.runtime.annotations.Recorder;
-import se.laz.casual.api.CasualRuntimeException;
-
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -41,7 +39,7 @@ public class CasualServiceRecorder
 
                 if (beanInstance == null)
                 {
-                    throw new CasualRuntimeException("CDI Bean not found for class: " + descriptor.className());
+                    throw new CasualServiceRegistrationException("CDI Bean not found for class: " + descriptor.className());
                 }
 
                 // Resolve parameter types
@@ -61,7 +59,7 @@ public class CasualServiceRecorder
             }
             catch (Exception e)
             {
-                LOG.log(ERROR, "Failed to register Casual service: " + descriptor.serviceName(), e);
+                throw new CasualServiceRegistrationException("Failed to register Casual service: " + descriptor.serviceName(), e);
             }
         }
         LOG.log(INFO, "Successfully registered {0} services", registered);

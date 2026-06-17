@@ -5,7 +5,6 @@
  */
 package se.laz.casual.quarkus;
 
-import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.network.messages.domain.TransactionType;
 
 import java.util.HashMap;
@@ -39,7 +38,7 @@ public final class TransactionTypeMapper
         {
             return NONE;
         }
-        return Optional.ofNullable(mappings.get(transactionType)).orElseThrow(() -> new CasualRuntimeException("unknown transaction type: " + transactionType));
+        return Optional.ofNullable(mappings.get(transactionType)).orElseThrow(() -> new CasualTransactionTypeMappingException("unknown transaction type: " + transactionType));
     }
 
 }
