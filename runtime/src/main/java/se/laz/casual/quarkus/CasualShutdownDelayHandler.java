@@ -51,7 +51,7 @@ public class CasualShutdownDelayHandler
         LOG.log(System.Logger.Level.INFO, "wire settle delay: " + wireSettleDelayMs + "ms");
         LOG.log(System.Logger.Level.INFO, "drain poll interval: " + pollIntervalMs + "ms");
 
-        // 1. Domaim going down, no new outbound service calls will be allowed
+        // 1. Domain going down, no new outbound service calls will be allowed
         //    They will all return TPENOENT
         RuntimeInformation.setDomainIsBeingShutdown(true);
 

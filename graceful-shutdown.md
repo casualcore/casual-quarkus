@@ -1,6 +1,6 @@
 [//]: # (-*- coding: utf-8-unix -*-)
 
-# Casual Quarkus Extension: Graceful Shutdown Architecture
+# Casual Quarkus Extension: Graceful Shutdown
 
 This document details how the Casual Quarkus JCA extension orchestrates a transactionally safe graceful shutdown when an application receives a SIGTERM signal.
 
@@ -18,7 +18,8 @@ It ensures that:
 
 * In-flight XA transactions are given maximum time to finish their Two-Phase Commit (2PC) cycles.
 
-* Late-arriving outbound, from the degrading application, service requests are failed fast with TPENOENT
+* Late-arriving outbound service requests from the degrading application are failed fast with TPENOENT
+
 
 ## Timeline
 
@@ -39,7 +40,7 @@ When a SIGTERM is issued to an application, the following sequential phases are 
  ├── 3. Transaction Draining Phase (Dynamic: Up to the remainder of the 30s window - or what you set `quarkus.shutdown.delay` to)
  │   └── The ShutdownBarrier actively polls internal registries.
  │       - Pending transactions in the Inbound/Outbound registries are allowed to finish.
- │       - Any accidental late outbound service calls are instantly rejected with TPENOENT.
+ │       - Any late outbound service calls are instantly rejected with TPENOENT.
  │
  ▼
 [ Hard Limit: e.g., 30s ] ──> Quarkus Delay Expires ──> JVM terminates cleanly.
@@ -59,13 +60,13 @@ All clients run a background timer-based validation bean configured to check poo
 
 It uses standard, low-overhead JCA connection acquisition (`getConnection()`) to verify if the pool is available ( `connected`) and if so, if it is marked as `disconnecting`. If true, or if connection acquisition fails, it safely evicts the pool from the active routing rotation.
 
-Any non `XA` calls fails on the client side.
+Any non-`XA` calls fails on the client side.
 
 ### The Wire-Settle Delay (casual.shutdown.wire-settle-delay-ms)
 
 Because the validation bean in a connected client operates on a 1-second resolution, the SIGTERM:ed application executes a deliberate fixed pause before evaluating its transaction registries.
 
-Configured by default to `1500ms`, this pause guarantees that the connected clients have completed at least one full validation loop tick, successfully locking the gate against new service traffic before the SIGMTERM:ed application starts its transaction drain.
+Configured by default to `1500ms`, this pause guarantees that the connected clients have completed at least one full validation loop tick, successfully locking the gate against new service traffic before the SIGTERM:ed application starts its transaction drain.
 
 ### Transaction drainage
 
@@ -85,7 +86,7 @@ This is expected and transactionally safe. When an application is in its drainin
 
 ## Configuration Properties
 
-These are the default settings by the extension, can be overidden in your application.
+These are the default settings by the extension, can be overridden in your application.
 
 ### Enable the mandatory fixed Quarkus quiet period
 
@@ -98,3 +99,8 @@ These are the default settings by the extension, can be overidden in your applic
 ### Fixed pause (in milliseconds) allowing network frames to settle and front-end validators to tick
 
 `casual.shutdown.wire-settle-delay-ms=1500`
+
+This is also set by the extension but it should never be overriden:
+
+### Enable shutdown delay
+`quarkus.shutdown.delay-enabled=true`
