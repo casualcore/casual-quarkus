@@ -1,10 +1,11 @@
+[//]: # (-*- coding: utf-8-unix -*-)
 # casual-quarkus
 
 A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https://github.com/casualcore/casual) middleware via [IronJacamar](https://docs.quarkiverse.io/quarkus-ironjacamar/dev/) (JCA).
 
 Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
 
-Currently wraps up Casual JCA 3.4.3
+Currently wraps up Casual JCA 3.4.7
 
 ## Getting Started
 
@@ -95,9 +96,11 @@ Inject the connection factory to call external Casual services:
 @Identifier("casual")
 CasualConnectionFactory connectionFactory;
 
-public ServiceReturn<CasualBuffer> callService(String serviceName, CasualBuffer payload) {
-    try (CasualConnection connection = connectionFactory.getConnection()) {
-        return connection.tpcall(serviceName, payload, Flag.of());
+public ServiceReturn<CasualBuffer> callService(String serviceName, CasualBuffer payload) 
+{
+    try (CasualConnection connection = connectionFactory.getConnection()) 
+    {
+        return connection.tpcall(serviceName, payload, Flag.of(AtmiFlags.NOFLAG));
     }
 }
 ```
@@ -122,7 +125,7 @@ quarkus.ironjacamar.other-pool.ra.config.port=7771
 
 ## Example Application
 
-The [`example/`](example/) directory contains a standalone Quarkus application that demonstrates:
+The [`example/`](example/README.md) directory contains standalone Quarkus applications that demonstrates:
 
 - **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, `FieldedServiceImpl` and `SumServiceImpl` exposed as Casual services via `@CasualService`
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
@@ -131,6 +134,7 @@ The [`example/`](example/) directory contains a standalone Quarkus application t
 - **casual config file** -- showing basic usage. See [https://github.com/casualcore/casual-java](casual-java) for documentation
 - **example fielded file** -- used in the fielded test service
 - **user defined handlers** -- showing how a user application can implement their own ServiceHandler, BufferHandler and ServiceHandlerExtension
+- **applications used for soak testing**
 
 The example app consumes the extension from Maven Local. Build and install the extension first:
 
@@ -138,72 +142,13 @@ The example app consumes the extension from Maven Local. Build and install the e
 ./gradlew clean build publishToMavenLocal
 ```
 
-Then build and run the example:
-
-```bash
-cd example
-CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev ./gradlew quarkusDev
-```
-
-or ( if you build a fat jar and want to test that)
-```bash
-CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
-```
-
-To run the examples with no casual, you can start two instances of the casual quarkus example-app such as:
-```sh
-CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev
-```
-
-and
-
-```sh
-QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json ./gradlew quarkusDev
-```
-
-or when using the fat jar:
-```sh
-CASUAL_CONFIG_FILE=$(pwd)/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
-```
-
-and
-
-```sh
-QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/example-app-1.0.0-runner.jar
-```
-
-You can then test, for instance the fielded service, as such:
-```sh
-$curl 'localhost:8080/casual/simpleObject?id=42&name=bob'
-SimpleObject{id=42, name='bob'}
-```
-
-Or to test the echo service:
-```sh
-$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/casual%2fexample%2fjava%2fecho
-Bazinga!
-```
-
-To test the sum service, which uses the user applications ```JsonBufferHandler```:
-```sh
-curl -X POST -d @sum.json -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/sum?bufferType=.json/
-```
-
-
-Note that the example application with the `peer` profile is exposing port 8000 instead of 8080.
-Also note that if you want to run the examples that uses their own buffer handlers etc, you need to restart the application when you have changed the handlers even when running with `quarkusDev`. 
-This since the handlers are found during build time of the user application.
-
-There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
-Note, it needs a reverse outbound to connect to and currently only casual cam provide that.
-
 ## XA note for quarkus
 
 At REST endpoints and at exposed java services `@CasualService`:
 ```java
 @Transactional(Transactional.TxType.REQUIRED)
 ```
-
+By default, quarkus REST endpoints are non transactional.
 
 ## Performance Tuning for Quarkus
 
@@ -214,47 +159,6 @@ To achieve the best results with Casual JCA in Quarkus, we recommend the followi
 * The Acquisition Bridge: If you see "Pinned Thread" warnings, ensure getConnection() is called via a platform executor (like Infrastructure.getDefaultExecutor()) to keep the IronJacamar pool logic away from the Virtual Thread carrier threads.
 
 * Logical vs. Physical Connections: Don't be afraid to set a high JCA max-pool-size (e.g., 1000+). Because Casual JCA multiplexes over a few physical Netty connections, these "connections" are just lightweight logical handles.
-
-* Transaction Reaper: Under extreme soak testing, give Narayana a bit more breathing room by increasing the default-timeout to account for high-concurrency network spikes.
-
-Example app soak test results:
-```sh
-$for c in 10 50 100 200 300 500 1000; do   echo "=== Concurrency: $c ===";   ab -n 5000 -c $c -k -q  -p ./sum.json -T 'application/casual-x-octet' http://localhost:8080/casual/sum?bufferType=.json/ 2>&1 | grep -E "Requests per second|Concurrency Level|Time taken for tests";   echo;   sleep 2; done
-=== Concurrency: 10 ===
-Concurrency Level:      10
-Time taken for tests:   2.647 seconds
-Requests per second:    1888.94 [#/sec] (mean)
-
-=== Concurrency: 50 ===
-Concurrency Level:      50
-Time taken for tests:   1.007 seconds
-Requests per second:    4963.49 [#/sec] (mean)
-
-=== Concurrency: 100 ===
-Concurrency Level:      100
-Time taken for tests:   0.815 seconds
-Requests per second:    6137.26 [#/sec] (mean)
-
-=== Concurrency: 200 ===
-Concurrency Level:      200
-Time taken for tests:   0.774 seconds
-Requests per second:    6459.14 [#/sec] (mean)
-
-=== Concurrency: 300 ===
-Concurrency Level:      300
-Time taken for tests:   0.647 seconds
-Requests per second:    7727.75 [#/sec] (mean)
-
-=== Concurrency: 500 ===
-Concurrency Level:      500
-Time taken for tests:   0.411 seconds
-Requests per second:    12152.53 [#/sec] (mean)
-
-=== Concurrency: 1000 ===
-Concurrency Level:      1000
-Time taken for tests:   0.400 seconds
-Requests per second:    12486.58 [#/sec] (mean)
-```
 
 
 ## Architecture
@@ -292,7 +196,7 @@ The handlers that can be overriden this way by a user application are:
 Casual client
   -> inbound server
   -> CasualMessageEndpoint
-  -> CasualQuarkusServiceHandler (LEVEL_3, preferred)
+  -> CasualQuarkusServiceHandler
   -> service method
   -> InboundResponse back to client
 ```
