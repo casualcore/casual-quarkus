@@ -5,7 +5,7 @@ A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https:/
 
 Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
 
-Currently wraps up Casual JCA 3.4.7
+Currently wraps up `Casual JCA 3.4.7` and `Casual Caller 3.3.3`
 
 ## Getting Started
 
@@ -161,6 +161,11 @@ To achieve the best results with Casual JCA in Quarkus, we recommend the followi
 * Logical vs. Physical Connections: Don't be afraid to set a high JCA max-pool-size (e.g., 1000+). Because Casual JCA multiplexes over a few physical Netty connections, these "connections" are just lightweight logical handles.
 
 
+## Gracful shutdown
+
+How graceful shutdown works is documented [here](graceful-shutdown.md)
+
+
 ## Architecture
 
 ```
@@ -218,5 +223,7 @@ Requires Java 25+.
 ## Related
 
 - [Casual middleware](https://github.com/casualcore/casual)
+- [Casual JCA](https://github.com/casualcore/casual-java)
+- [Casual Caller](https://github.com/casualcore/casual-caller)
 - [Quarkus IronJacamar extension](https://docs.quarkiverse.io/quarkus-ironjacamar/dev/)
-- [Quarkus extension guide](https://quarkus.io/guides/writing-extensions)
+
