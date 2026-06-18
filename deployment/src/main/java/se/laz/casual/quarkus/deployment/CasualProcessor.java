@@ -67,7 +67,7 @@ class CasualProcessor
     }
 
     @BuildStep
-    void registerRuntimeBeans(CombinedIndexBuildItem index, BuildProducer<AdditionalBeanBuildItem> additionalBeans)
+    void registerRuntimeBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans)
     {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
             "se.laz.casual.quarkus.CasualQuarkusResourceAdapterFactory"));

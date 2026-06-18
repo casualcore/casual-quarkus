@@ -5,8 +5,10 @@
  */
 package se.laz.casual.quarkus;
 
-import java.util.Arrays;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * The types of Casual JCA SPIs that can be overridden in a user application.
@@ -18,6 +20,17 @@ public enum CasualSPIType
     SERVICE_HANDLER_EXTENSION("se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension"),
     FIELDED_MARSHALLER("se.laz.casual.api.buffer.type.fielded.marshalling.FieldedMarshaller");
     private final String name;
+
+    private static final Map<String, CasualSPIType> CACHE;
+
+    static
+    {
+        Map<String, CasualSPIType> map = new HashMap<>();
+        for (CasualSPIType spiType : CasualSPIType.values()) {
+            map.put(spiType.name, spiType);
+        }
+        CACHE = Collections.unmodifiableMap(map);
+    }
 
     CasualSPIType(String name)
     {
@@ -31,9 +44,12 @@ public enum CasualSPIType
 
     public static CasualSPIType unmarshall(String name)
     {
-        Optional<CasualSPIType> t = Arrays.stream(CasualSPIType.values())
-                                          .filter(v -> v.getName().equals(name))
-                                          .findFirst();
-        return t.orElseThrow(() -> new IllegalArgumentException("CasualSPIType:" + name));
+        Objects.requireNonNull(name, "name can not be null");
+        CasualSPIType type = CACHE.get(name);
+        if (type == null)
+        {
+            throw new IllegalArgumentException("Unknown CasualSPIType: " + name);
+        }
+        return type;
     }
 }

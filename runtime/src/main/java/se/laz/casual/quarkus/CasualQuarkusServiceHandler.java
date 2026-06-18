@@ -108,6 +108,10 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
                 BufferHandler bufferHandler = BufferHandlerFactory.getHandler(request.getBuffer().getType());
                 extensionContext = serviceHandlerExtension.before(request, bufferHandler);
 
+                // InboundRequestInfo requires a proxy instance for compatibility with the
+                // WildFly EJB-based service handler where the proxy is a real EJB reference.
+                // In Quarkus we invoke CDI beans directly, so the proxy is unused — we provide
+                // a no-op placeholder to satisfy the builder contract.
                 Proxy dummyProxy = (Proxy) Proxy.newProxyInstance(
                         Thread.currentThread().getContextClassLoader(),
                         new Class<?>[]{CasualMarkerInterface.class},

@@ -87,6 +87,14 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
 }
 ```
 
+When using `casual-caller` you can also use a configuration file, pointed to by the `CASUAL_CALLER_CONFIG_FILE` environment variable, in case you want to set transactions as sticky - multiple calls in the same transaction uses the same pool in case the services are available there.
+
+```json
+{
+  "transactionStickyEnabled": true
+}
+```
+
 ### Make outbound calls
 
 Inject the connection factory to call external Casual services:

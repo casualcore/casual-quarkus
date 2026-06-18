@@ -16,6 +16,8 @@ import se.laz.casual.connection.caller.ConnectionFactoryFinder;
 import se.laz.casual.jca.CasualConnectionFactory;
 import java.util.List;
 
+import static java.lang.System.Logger.Level.INFO;
+
 @ApplicationScoped
 @Alternative
 @Priority(5)
@@ -35,7 +37,6 @@ public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
     @Override
     public List<ConnectionFactoryEntry> findConnectionFactory(String root)
     {
-        LOG.log(System.Logger.Level.INFO, () -> "CustomConnectionFactoryFinder::findConnectionFactory " + root);
         return connectionFactories.handlesStream()
                                   .map(handle -> {
                                       String poolName = handle.getBean().getQualifiers().stream()
@@ -44,6 +45,7 @@ public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
                                                               .findFirst()
                                                               .orElseThrow(() -> new CasualConnectionFactoryException("Pool name is missing for: " + handle.get()));
                                       CasualConnectionFactory cf = handle.get();
+                                      LOG.log(System.Logger.Level.INFO, () -> "CustomConnectionFactoryFinder::findConnectionFactory poolName: " + poolName);
                                       return ConnectionFactoryEntry.of(QuarkusConnectionFactoryProducer.of(poolName, cf));
                                   })
                                   .toList();

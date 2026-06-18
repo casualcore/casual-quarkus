@@ -13,7 +13,8 @@ public class CasualTypeResolver
     {}
     public static Class<?> loadClass(ClassLoader cl, String name) throws ClassNotFoundException
     {
-        return switch (name) {
+        return switch (name)
+        {
             case "byte" -> byte.class;
             case "short" -> short.class;
             case "int" -> int.class;
@@ -23,7 +24,8 @@ public class CasualTypeResolver
             case "boolean" -> boolean.class;
             case "char" -> char.class;
             case "void" -> void.class;
-            default -> {
+            default ->
+            {
                 // Check if it's already an internal JVM descriptor
                 if (name.startsWith("["))
                 {

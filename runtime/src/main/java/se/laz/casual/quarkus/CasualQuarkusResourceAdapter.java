@@ -95,6 +95,8 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     {
         // we guard so that this is only being executed once - regardless of how many outbound pools
         // that are configured - since we only have one inbound server running regardless of how many outbound pools there are
+        // note: this is a fallback in case the user application has disabled the shutdown barrier
+        // by setting quarkus.shutdown.delay-enabled=false
         RuntimeInformation.setDomainIsBeingShutdown(true);
         if (INBOUND_ACTIVE.decrementAndGet() == 0)
         {
