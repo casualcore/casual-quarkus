@@ -14,7 +14,7 @@ Build and run the example:
 
 ```bash
 cd example
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew quarkusDev ./gradlew quarkusDev
+CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew quarkusDev
 ```
 
 or ( if you build a fat jar and want to test that)
@@ -67,4 +67,4 @@ Also note that if you want to run the examples that uses their own buffer handle
 This since the handlers are found during build time of the user application.
 
 There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
-Note, it needs a reverse outbound to connect to and currently only casual cam provide that.
+Note, it needs a reverse outbound to connect to and currently only casual can provide that.

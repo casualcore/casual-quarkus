@@ -18,10 +18,6 @@ quarkusExtension {
     deploymentModule = 'casual-quarkus-deployment'
 }
 
-test{
-    useJUnitPlatform()
-}
-
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     api 'io.quarkus:quarkus-arc'
@@ -58,13 +54,23 @@ dependencies {
     testRuntimeOnly libs.junit_platform
 }
 
-// The Quarkus extension annotation processor locates pom.xml by walking 3 parent
-// directories up from CLASS_OUTPUT. In Gradle that lands at build/classes/ rather
-// than the project root (as in Maven). Generate a minimal pom.xml there so the
-// processor can detect groupId/artifactId and -Werror is preserved.
-tasks.register('generateExtensionPom') {
+// HACK: The 'quarkus-extension-processor' annotation processor has a hardcoded Maven bias.
+// During the 'compileJava' phase, it attempts to resolve the extension's GAV coordinates
+// (GroupId, ArtifactId, Version) by traversing up the directory tree looking for a 'pom.xml'
+// relative to its compilation CLASS_OUTPUT anchor.
+//
+// In a native Gradle build, no such file exists, which causes the processor to emit a warning:
+// "We could not detect the groupId and artifactId of this module...". 
+// Because this project enforces strict compilation via '-Werror', this warning promotes to a 
+// build-failing error.
+//
+// To satisfy the processor without maintaining a duplicate, static root Maven file, we 
+// dynamically generate a transient, minimal 'pom.xml' exactly where the processor expects it 
+// (build/classes/pom.xml) right before compilation begins.
+def generateExtensionPom = tasks.register('generateExtensionPom') {
     def pomFile = layout.buildDirectory.file('classes/pom.xml')
     outputs.file(pomFile)
+    
     doLast {
         pomFile.get().asFile.text = """\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -77,8 +83,9 @@ tasks.register('generateExtensionPom') {
 """
     }
 }
-tasks.named('compileJava') {
-    dependsOn 'generateExtensionPom'
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn(generateExtensionPom)
 }
 
 publishing {

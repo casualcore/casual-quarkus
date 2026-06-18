@@ -56,6 +56,10 @@ public class CasualResourceCallerSync
             @QueryParam("numberOfCalls") Integer numberOfCalls,
             InputStream inputStream) throws IOException
     {
+        if (numberOfCalls < 1)
+        {
+            return Response.serverError().entity("Invalid number of calls, expecting 1-n").build();
+        }
         byte[] data = IOUtils.toByteArray(inputStream);
         Flag<AtmiFlags> flags = Flag.of(AtmiFlags.NOFLAG);
         CasualBuffer buffer = createBuffer(data, CasualBufferType.unmarshall(bufferType));

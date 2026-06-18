@@ -57,3 +57,5 @@ kill %1
 while the soak testing is running.
 
 Then check the logs for any errors, there should also be zero indoubt transactions.
+
+See [graceful shutdown](../graceful-shutdown.md)
