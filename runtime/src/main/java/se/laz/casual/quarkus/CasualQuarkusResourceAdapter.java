@@ -19,10 +19,9 @@ import se.laz.casual.jca.ShutdownBarrier;
 import se.laz.casual.jca.inflow.CasualInboundTransactionRegistry;
 
 import javax.transaction.xa.XAResource;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.System.Logger;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Wrapper for CasualResourceAdapter

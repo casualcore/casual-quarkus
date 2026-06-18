@@ -5,6 +5,7 @@
 
 ### DB Application
 Uses an in memory db
+
 To see if there are any indoubt transactions:
 ```sh
 find ObjectStore -type f 2>/dev/null

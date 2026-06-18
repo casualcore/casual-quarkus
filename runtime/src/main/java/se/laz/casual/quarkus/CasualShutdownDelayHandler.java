@@ -14,7 +14,6 @@ import se.laz.casual.jca.CasualResourceManager;
 import se.laz.casual.jca.Predicate;
 import se.laz.casual.jca.RuntimeInformation;
 import se.laz.casual.jca.ShutdownBarrier;
-import se.laz.casual.jca.inflow.CasualInboundTransactionRegistry;
 import se.laz.casual.network.InboundDeactivatedContext;
 import se.laz.casual.network.InboundTopologyUpdateContext;
 
