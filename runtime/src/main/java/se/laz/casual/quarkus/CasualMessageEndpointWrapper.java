@@ -24,6 +24,9 @@ import se.laz.casual.network.protocol.messages.transaction.CasualTransactionReso
 
 import java.util.function.Consumer;
 
+/**
+ * Wraps a {@link MessageEndpoint} and {@link CasualMessageListener} for IronJacamar integration.
+ */
 public class CasualMessageEndpointWrapper extends MessageEndpointWrapper implements CasualMessageListener
 {
     private final CasualMessageListener listener;

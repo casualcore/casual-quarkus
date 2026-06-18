@@ -10,6 +10,9 @@ import se.laz.casual.jca.CasualConnectionFactory;
 
 import java.util.Objects;
 
+/**
+ * Wraps a Quarkus-managed {@link CasualConnectionFactory} with its pool name for use by casual-caller.
+ */
 public class QuarkusConnectionFactoryProducer implements ConnectionFactoryProducer
 {
     private final String name;

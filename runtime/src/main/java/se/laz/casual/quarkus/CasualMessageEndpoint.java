@@ -32,6 +32,9 @@ import static java.lang.System.Logger.Level.DEBUG;
 @ApplicationScoped
 @ResourceEndpoint
 @Identifier("casual")
+/**
+ * CDI-managed message endpoint that delegates inbound Casual messages to {@link CasualMessageListenerImpl}.
+ */
 public class CasualMessageEndpoint implements CasualMessageListener
 {
     private static final Logger LOG = System.getLogger(CasualMessageEndpoint.class.getName());

@@ -7,6 +7,9 @@ package se.laz.casual.quarkus;
 
 import se.laz.casual.api.CasualRuntimeException;
 
+/**
+ * Thrown when a {@code @CasualService} fails to register during runtime initialization.
+ */
 public class CasualServiceRegistrationException extends CasualRuntimeException
 {
     private static final long serialVersionUID = 1L;

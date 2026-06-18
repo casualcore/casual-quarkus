@@ -1,7 +1,6 @@
 //-*- coding: utf-8-unix -*-
 plugins {
     id 'java-library'
-    id 'maven-publish'
 }
 
 dependencies {
@@ -34,11 +33,4 @@ tasks.named('compileJava') {
     dependsOn 'generateExtensionPom'
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
-}
 

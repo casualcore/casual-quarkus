@@ -16,6 +16,9 @@ import static se.laz.casual.network.messages.domain.TransactionType.AUTOMATIC;
 import static se.laz.casual.network.messages.domain.TransactionType.JOIN;
 import static se.laz.casual.network.messages.domain.TransactionType.NONE;
 
+/**
+ * Maps Jakarta {@code @Transactional} TxType values to Casual {@link TransactionType}.
+ */
 public final class TransactionTypeMapper
 {
     private TransactionTypeMapper()
@@ -38,7 +41,12 @@ public final class TransactionTypeMapper
         {
             return NONE;
         }
-        return Optional.ofNullable(mappings.get(transactionType)).orElseThrow(() -> new CasualTransactionTypeMappingException("unknown transaction type: " + transactionType));
+        var type = mappings.get(transactionType);
+        if(null == type)
+        {
+            throw new CasualTransactionTypeMappingException("unknown transaction type: " + transactionType);
+        }
+        return type;
     }
 
 }

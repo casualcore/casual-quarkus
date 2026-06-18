@@ -7,6 +7,9 @@ package se.laz.casual.quarkus;
 
 import java.lang.reflect.Array;
 
+/**
+ * Utility for resolving class names to Class objects, including primitives and array types.
+ */
 public class CasualTypeResolver
 {
     private CasualTypeResolver()

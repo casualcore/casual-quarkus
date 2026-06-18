@@ -27,6 +27,9 @@ import static java.lang.System.Logger.Level.WARNING;
 @ApplicationScoped
 @Alternative
 @Priority(5)
+/**
+ * Quarkus-specific topology change handler that batches and processes domain changes on a scheduled timer.
+ */
 public class QuarkusTopologyChangedHandler implements TopologyChangedHandler
   {
       private static final System.Logger LOG = System.getLogger(QuarkusTopologyChangedHandler.class.getName());

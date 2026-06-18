@@ -21,6 +21,9 @@ import static java.lang.System.Logger.Level.INFO;
 @ApplicationScoped
 @Alternative
 @Priority(5)
+/**
+ * Quarkus-specific connection factory finder that discovers IronJacamar-managed pools via CDI.
+ */
 public class CustomConnectionFactoryFinder implements ConnectionFactoryFinder
 {
     private static final System.Logger LOG = System.getLogger(CustomConnectionFactoryFinder.class.getName());

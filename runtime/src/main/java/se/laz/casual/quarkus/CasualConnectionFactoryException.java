@@ -7,6 +7,9 @@ package se.laz.casual.quarkus;
 
 import se.laz.casual.api.CasualRuntimeException;
 
+/**
+ * Thrown when a connection factory configuration error is detected.
+ */
 public class CasualConnectionFactoryException extends CasualRuntimeException
 {
     private static final long serialVersionUID = 1L;

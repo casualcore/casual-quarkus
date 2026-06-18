@@ -4,7 +4,7 @@ plugins {
     id 'groovy'
     id 'io.quarkus.extension'
     id 'org.kordamp.gradle.jandex'
-    id 'maven-publish'
+
 }
 
 test {
@@ -88,10 +88,8 @@ tasks.named('compileJava', JavaCompile) {
     dependsOn(generateExtensionPom)
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from components.java
-        }
-    }
+tasks.named('javadoc') {
+    dependsOn('jandex')
 }
+
+

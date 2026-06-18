@@ -23,6 +23,9 @@ import java.util.Map;
 @ApplicationScoped
 @ResourceAdapterKind("casual")
 @ResourceAdapterTypes(connectionFactoryTypes = { CasualConnectionFactory.class })
+/**
+ * IronJacamar factory that creates Casual resource adapter, managed connection factory, and activation spec instances.
+ */
 public class CasualQuarkusResourceAdapterFactory implements ResourceAdapterFactory
 {
     @Override

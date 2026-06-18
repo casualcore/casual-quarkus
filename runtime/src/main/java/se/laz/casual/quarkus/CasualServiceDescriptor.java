@@ -10,6 +10,16 @@ import io.quarkus.runtime.annotations.RecordableConstructor;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Build-time descriptor for a {@code @CasualService} method, used by the recorder to register services at runtime.
+ *
+ * @param serviceName the Casual service name
+ * @param className the fully qualified class name of the bean
+ * @param methodName the method name on the bean
+ * @param category the service category
+ * @param parameterTypes the fully qualified class names of the method parameters
+ * @param transactionType the Jakarta transaction type as a string, or null if not annotated
+ */
 public record CasualServiceDescriptor(String serviceName, String className, String methodName, String category, List<String> parameterTypes,
                                       String transactionType)
 {

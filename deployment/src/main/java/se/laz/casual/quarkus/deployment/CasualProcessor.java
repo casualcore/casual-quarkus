@@ -36,6 +36,27 @@ import java.util.List;
 
 import static io.quarkus.deployment.annotations.ExecutionTime.RUNTIME_INIT;
 
+/**
+ * Quarkus build-time processor for the Casual extension.
+ *
+ * <p>Runs during the augmentation phase and performs the following tasks:
+ * <ul>
+ *   <li>Indexes Casual library modules (inbound handlers, caller, JSON provider) so that
+ *       Jandex can discover their annotations and implementations.</li>
+ *   <li>Registers Casual runtime beans (resource adapter, service registry, message endpoint,
+ *       caller, topology handler) as unremovable CDI beans.</li>
+ *   <li>Scans the combined index for {@code @Inject} constructors in the casual-caller and
+ *       casual-http packages and registers those classes as CDI beans.</li>
+ *   <li>Discovers SPI implementations ({@code BufferHandler}, {@code ServiceHandler},
+ *       {@code ServiceHandlerExtension}, {@code FieldedMarshaller}) and registers them
+ *       both for {@link java.util.ServiceLoader} and as application-scoped CDI beans.</li>
+ *   <li>Discovers methods annotated with {@code @CasualService}, extracts their service name,
+ *       category, parameter types, and Jakarta transaction type, and passes the descriptors
+ *       to {@link CasualServiceRecorder} for runtime registration.</li>
+ *   <li>Passes discovered SPI descriptors to {@link CasualSPIRecorder} for runtime
+ *       registration.</li>
+ * </ul>
+ */
 class CasualProcessor
 {
     private static final String FEATURE = "casual";
@@ -70,11 +91,11 @@ class CasualProcessor
     void registerRuntimeBeans(BuildProducer<AdditionalBeanBuildItem> additionalBeans)
     {
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
-            "se.laz.casual.quarkus.CasualQuarkusResourceAdapterFactory"));
+                "se.laz.casual.quarkus.CasualQuarkusResourceAdapterFactory"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
-            "se.laz.casual.quarkus.CasualQuarkusServiceRegistry"));
+                "se.laz.casual.quarkus.CasualQuarkusServiceRegistry"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
-            "se.laz.casual.quarkus.CasualMessageEndpoint"));
+                "se.laz.casual.quarkus.CasualMessageEndpoint"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
                 "se.laz.casual.quarkus.QuarkusConnectionFactoryEntryValidationTimer"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(

@@ -1,12 +1,10 @@
 //-*- coding: utf-8-unix -*-
 
 plugins{
-    id 'maven-publish'
     id "org.sonarqube" version "7.1.0.6387"
 }
 
 apply from: "$rootProject.projectDir/versions.gradle"
-apply from: "$rootProject.projectDir/publish.gradle"
 
 allprojects {
     group = 'se.laz.casual'
@@ -32,6 +30,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
+    apply from: "$rootProject.projectDir/publish.gradle"
 
     java {
         sourceCompatibility = JavaVersion.VERSION_25
@@ -50,6 +49,9 @@ subprojects {
         testLogging {
             events "started", "passed", "failed", "skipped"
     	}
+    }
+    tasks.withType(Javadoc).configureEach {
+        options.addStringOption('Xdoclint:none', '-quiet')
     }
 }
 

@@ -7,6 +7,9 @@ package se.laz.casual.quarkus;
 
 import se.laz.casual.api.CasualRuntimeException;
 
+/**
+ * Thrown when an SPI implementation fails to register during runtime initialization.
+ */
 public class CasualSPIRegistrationException extends CasualRuntimeException
 {
     private static final long serialVersionUID = 1L;

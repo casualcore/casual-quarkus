@@ -12,6 +12,12 @@ import java.util.Objects;
 
 /**
  * Represents a registered Casual service in Quarkus.
+ *
+ * @param serviceName the Casual service name
+ * @param category the service category
+ * @param beanInstance the CDI bean instance that implements the service
+ * @param method the method to invoke on the bean
+ * @param transactionType the Casual transaction type for this service
  */
 public record ServiceEntry(String serviceName, String category, Object beanInstance, Method method,
                            TransactionType transactionType)
