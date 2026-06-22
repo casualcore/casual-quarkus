@@ -228,6 +228,15 @@ Install to Maven Local for consumption by application projects:
 
 Requires Java 25+.
 
+## Upgrading the Quarkus version
+
+The Quarkus version is defined in two places:
+
+1. **`versions.gradle`** — the `quarkus_version` variable, used by all build scripts for the platform BOM and deployment dependencies.
+2. **`settings.gradle`** — the plugin version in the `pluginManagement` block. This must be a literal string because Gradle requires `pluginManagement` to be evaluated before any scripts are applied.
+
+When upgrading, update both files to the same version. There is intentionally no `gradle.properties` in the extension — that file is reserved for local publishing credentials (signing keys, Maven Central tokens) and is never checked in.
+
 ## Related
 
 - [Casual middleware](https://github.com/casualcore/casual)

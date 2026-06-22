@@ -1,8 +1,12 @@
 //-*- coding: utf-8-unix -*-
+def quarkus_version = '3.33.2'
 def gson_version = '2.13.1'
 def casual_version = '3.4.8'
 def casual_caller_version = '3.3.3'
 def ironjacamar_version = '1.8.3'
+
+ext.quarkusPlatformBom = "io.quarkus.platform:quarkus-bom:${quarkus_version}"
+ext.quarkusVersion = quarkus_version
 
 ext.libs = [
     ironjacamar: "io.quarkiverse.ironjacamar:quarkus-ironjacamar:${ironjacamar_version}",

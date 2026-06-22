@@ -41,6 +41,12 @@ nb-configuration.xml
 # Local environment
 .env
 
+# gradle.properties contains publishing credentials and must not be checked in.
+# The example subproject has its own checked-in gradle.properties for Quarkus plugin
+# coordinates which is fine since it has no publishing credentials.
+gradle.properties
+!example/gradle.properties
+
 # Plugin directory
 /.quarkus/cli/plugins/
 # TLS Certificates

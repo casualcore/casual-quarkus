@@ -4,14 +4,14 @@ plugins {
 }
 
 dependencies {
-    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
-    implementation "io.quarkus:quarkus-core-deployment:${quarkusPlatformVersion}"
+    implementation enforcedPlatform(quarkusPlatformBom)
+    implementation "io.quarkus:quarkus-core-deployment:${quarkusVersion}"
     implementation libs.ironjacamar_deployment
-    implementation "io.quarkus:quarkus-narayana-jta-deployment:${quarkusPlatformVersion}"
-    implementation "io.quarkus:quarkus-scheduler-deployment:${quarkusPlatformVersion}"
+    implementation "io.quarkus:quarkus-narayana-jta-deployment:${quarkusVersion}"
+    implementation "io.quarkus:quarkus-scheduler-deployment:${quarkusVersion}"
     implementation project(':casual-quarkus')
 
-    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
+    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusVersion}"
 }
 
 // See runtime/build.gradle for explanation

@@ -17,7 +17,7 @@ quarkusExtension {
 }
 
 dependencies {
-    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation enforcedPlatform(quarkusPlatformBom)
     api 'io.quarkus:quarkus-arc'
     api libs.ironjacamar
 
@@ -40,7 +40,7 @@ dependencies {
 
     implementation 'io.quarkus:quarkus-scheduler'
     
-    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusPlatformVersion}"
+    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusVersion}"
 
     testImplementation platform(libs.groovy_bom)
     testImplementation libs.groovy_lang

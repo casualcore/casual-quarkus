@@ -6,9 +6,9 @@ pluginManagement {
         mavenLocal()
     }
     plugins {
-        id "${quarkusPluginId}" version "${quarkusPluginVersion}"
-        id 'io.quarkus.extension' version "${quarkusPluginVersion}"
-}
+        id 'io.quarkus' version '3.33.2'
+        id 'io.quarkus.extension' version '3.33.2'
+    }
 }
 rootProject.name='casual-quarkus'
 
@@ -17,4 +17,3 @@ include 'deployment'
 
 project(':runtime').name = 'casual-quarkus'
 project(':deployment').name = 'casual-quarkus-deployment'
-
