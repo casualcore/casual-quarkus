@@ -11,7 +11,6 @@ import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.util.List;
 
-import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 
 /**
@@ -51,7 +50,7 @@ public class CasualServiceRecorder
 
                 Method method = beanClass.getMethod(descriptor.methodName(), paramTypes);
 
-                ServiceEntry entry = new ServiceEntry(descriptor.serviceName(), descriptor.category(), beanInstance, method, TransactionTypeMapper.map(descriptor.transactionType()));
+                ServiceEntry entry = new ServiceEntry(descriptor.serviceName(), descriptor.category(), beanInstance, method, TransactionTypeMapper.unmarshall(descriptor.transactionType()));
                 registry.registerService(entry);
 
                 registered++;

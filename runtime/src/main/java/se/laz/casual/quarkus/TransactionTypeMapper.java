@@ -9,7 +9,6 @@ import se.laz.casual.network.messages.domain.TransactionType;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static se.laz.casual.network.messages.domain.TransactionType.ATOMIC;
 import static se.laz.casual.network.messages.domain.TransactionType.AUTOMATIC;
@@ -34,7 +33,7 @@ public final class TransactionTypeMapper
         mappings.put( "SUPPORTS",         JOIN );
     }
 
-    public static TransactionType map(final String transactionType)
+    public static TransactionType unmarshall(final String transactionType)
     {
         // means that there is no transactional annotation
         if(null == transactionType)

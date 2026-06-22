@@ -10,10 +10,10 @@ import spock.lang.Specification
 
 class TransactionTypeMapperTest extends Specification
 {
-    def "map returns #expected for Jakarta TxType '#input'"()
+    def "unmarshall returns #expected for Jakarta TxType '#input'"()
     {
         expect:
-        TransactionTypeMapper.map(input) == expected
+        TransactionTypeMapper.unmarshall(input) == expected
 
         where:
         input           | expected
@@ -25,16 +25,16 @@ class TransactionTypeMapperTest extends Specification
         "SUPPORTS"      | TransactionType.JOIN
     }
 
-    def "map returns NONE when transactionType is null"()
+    def "unmarshall returns NONE when transactionType is null"()
     {
         expect:
-        TransactionTypeMapper.map(null) == TransactionType.NONE
+        TransactionTypeMapper.unmarshall(null) == TransactionType.NONE
     }
 
-    def "map throws CasualTransactionTypeMappingException for unknown type"()
+    def "unmarshall throws CasualTransactionTypeMappingException for unknown type"()
     {
         when:
-        TransactionTypeMapper.map("UNKNOWN")
+        TransactionTypeMapper.unmarshall("UNKNOWN")
 
         then:
         def e = thrown(CasualTransactionTypeMappingException)
