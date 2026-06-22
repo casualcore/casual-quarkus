@@ -79,7 +79,7 @@ for c in 10 50 100 200 300 500 1000; do
 
    WRK_BODY_FILE="$DATA_FILE" \
    WRK_ERROR_FILE="$ERR_BODY_FILE" \
-   $WRK_PATH -t"$THREADS" -c"$c" -d"$DURATION" \
+   $WRK_PATH -t"$THREADS" -c"$c" -d"$DURATION" --timeout 5s \
        -s "$LUA_SCRIPT" \
        "$BASE_URL/$SERVICE_NAME" \
        >"$OUTPUT_FILE" 2>&1
