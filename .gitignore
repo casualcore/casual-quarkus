@@ -1,0 +1,63 @@
+# Gradle
+.gradle/
+build/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# IntelliJ
+.idea
+*.ipr
+*.iml
+*.iws
+
+# NetBeans
+nb-configuration.xml
+
+# Visual Studio Code
+.vscode
+.factorypath
+
+# OSX
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+
+# emacs
+*~
+*.orig
+\#*\#
+[#]*[#]
+
+# patch
+*.orig
+*.rej
+
+# Local environment
+.env
+
+# The example subproject has its own checked-in gradle.properties for Quarkus plugin
+# coordinates which is fine since it has no publishing credentials.
+gradle.properties
+!example/gradle.properties
+
+# Plugin directory
+/.quarkus/cli/plugins/
+# TLS Certificates
+.certs/
+
+# H2 in example subproject
+ObjectStore/
+
+*.log
+dump*
+secret.*
+
+*.class
+*.jar
+

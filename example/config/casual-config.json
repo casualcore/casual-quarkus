@@ -1,0 +1,27 @@
+{
+    "domain": {
+        "name": "quarkus-casual-domain-one"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "inbound": {
+        "useEpoll": true,
+        "startup": {
+            "mode": "discover",
+            "services": [
+                "echo",
+                "nonTransactionalEcho",
+                "reverse",
+                "echoFielded",
+                "sum"
+            ]
+        }       
+    },
+    "eventServer":{
+        "portNumber": 7698,
+        "useEpoll": true
+    }
+}

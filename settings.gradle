@@ -1,0 +1,19 @@
+//-*- coding: utf-8-unix -*-
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal()
+    }
+    plugins {
+        id 'io.quarkus' version '3.33.2'
+        id 'io.quarkus.extension' version '3.33.2'
+    }
+}
+rootProject.name='casual-quarkus'
+
+include 'runtime'
+include 'deployment'
+
+project(':runtime').name = 'casual-quarkus'
+project(':deployment').name = 'casual-quarkus-deployment'

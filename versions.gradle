@@ -1,0 +1,37 @@
+//-*- coding: utf-8-unix -*-
+def quarkus_version = '3.33.2'
+def gson_version = '2.13.1'
+def casual_version = '3.4.8'
+def casual_caller_version = '3.3.3'
+def ironjacamar_version = '1.8.3'
+
+ext.quarkusPlatformBom = "io.quarkus.platform:quarkus-bom:${quarkus_version}"
+ext.quarkusVersion = quarkus_version
+
+ext.libs = [
+    ironjacamar: "io.quarkiverse.ironjacamar:quarkus-ironjacamar:${ironjacamar_version}",
+    ironjacamar_deployment: "io.quarkiverse.ironjacamar:quarkus-ironjacamar-deployment:${ironjacamar_version}",
+    casual_api: "se.laz.casual:casual-api:${casual_version}",
+    casual_api_spi_impl: "se.laz.casual:casual-api-spi-impl:${casual_version}",
+    casual_inbound_api: "se.laz.casual:casual-inbound-api:${casual_version}",
+    casual_inbound: "se.laz.casual:casual-inbound:${casual_version}",
+    casual_inbound_handler_api: "se.laz.casual:casual-inbound-handler-api:${casual_version}",
+    casual_inbound_handler_casual_service: "se.laz.casual:casual-inbound-handler-casual-service:${casual_version}",
+    casual_inbound_handler_fielded_buffer: "se.laz.casual:casual-inbound-handler-fielded-buffer:${casual_version}",
+    casual_jca: "se.laz.casual:casual-jca:${casual_version}",
+    casual_network_protocol: "se.laz.casual:casual-network-protocol:${casual_version}",
+    casual_network: "se.laz.casual:casual-network:${casual_version}",
+    casual_internal: "se.laz.casual:casual-internal:${casual_version}",
+    casual_caller: "se.laz.casual:casual-caller:${casual_caller_version}",
+    casual_caller_api: "se.laz.casual:casual-caller-api:${casual_caller_version}",
+    casual_caller_http_client: "se.laz.casual:casual-caller-http-client:${casual_caller_version}",
+    gson: "com.google.code.gson:gson:${gson_version}",
+    commons_io: 'commons-io:commons-io:2.11.0',
+    // for spock
+    groovy_bom: 'org.apache.groovy:groovy-bom:5.0.5',
+    groovy_lang: 'org.apache.groovy:groovy',
+    spock_bom: 'org.spockframework:spock-bom:2.4-groovy-5.0',
+    spock_core: 'org.spockframework:spock-core',
+    junit_platform: 'org.junit.platform:junit-platform-launcher',
+    byte_buddy: 'net.bytebuddy:byte-buddy:1.17.5'
+]

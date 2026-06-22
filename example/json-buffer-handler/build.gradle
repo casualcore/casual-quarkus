@@ -1,0 +1,21 @@
+//-*- coding: utf-8-unix -*-
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+dependencies {
+    compileOnly libs.casual_api
+    compileOnly libs.casual_inbound_handler_fielded_buffer
+    compileOnly libs.gson
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-rest'
+    // you should run ../gradlew clean build publishToMavenLocal first
+    implementation libs.casual_quarkus
+    implementation libs.commons_io
+
+    runtimeOnly libs.gson
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+}

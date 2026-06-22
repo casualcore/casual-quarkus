@@ -1,0 +1,20 @@
+//-*- coding: utf-8-unix -*-
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+dependencies {
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation libs.casual_caller_api
+    implementation libs.casual_caller
+    implementation 'io.quarkus:quarkus-rest'
+    implementation 'io.quarkus:quarkus-rest-client'
+    implementation libs.casual_quarkus
+    implementation libs.commons_io
+
+    runtimeOnly libs.gson
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+}

@@ -1,0 +1,25 @@
+//-*- coding: utf-8-unix -*-
+plugins{
+    id "org.sonarqube" version "7.1.0.6387"
+}
+apply from: "$rootProject.projectDir/versions.gradle"
+
+allprojects {
+    group = 'se.laz.casual'
+    version = '1.0.0'
+
+    repositories {
+        mavenCentral()
+        maven {
+            name = 'Central Portal Snapshots'
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
+            content {
+                includeGroup("se.laz.casual")
+            }
+        }
+        mavenLocal()
+    }
+    tasks.withType(GenerateModuleMetadata).configureEach {
+        suppressedValidationErrors.add('enforced-platform')
+    }
+}

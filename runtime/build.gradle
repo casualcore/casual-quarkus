@@ -1,0 +1,89 @@
+//-*- coding: utf-8-unix -*-
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'io.quarkus.extension'
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+quarkusExtension {
+    deploymentModule = 'casual-quarkus-deployment'
+}
+
+dependencies {
+    implementation enforcedPlatform(quarkusPlatformBom)
+    api 'io.quarkus:quarkus-arc'
+    api libs.ironjacamar
+
+    // Casual libraries - api scope for types exposed to consumers
+    api libs.casual_api
+    api libs.casual_inbound_api
+    api libs.casual_inbound_handler_api
+    api libs.casual_jca
+    api libs.casual_caller_api
+
+    // Implementation-only casual libraries
+    implementation libs.casual_inbound
+    implementation libs.casual_inbound_handler_casual_service
+    implementation libs.casual_inbound_handler_fielded_buffer
+    implementation libs.casual_network_protocol
+    implementation libs.casual_network
+    implementation libs.casual_internal
+    implementation libs.casual_api_spi_impl
+    implementation libs.casual_caller
+
+    implementation 'io.quarkus:quarkus-scheduler'
+    
+    annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusVersion}"
+
+    testImplementation platform(libs.groovy_bom)
+    testImplementation libs.groovy_lang
+
+    testImplementation platform(libs.spock_bom)
+    testImplementation libs.spock_core
+    testImplementation libs.byte_buddy
+
+    testRuntimeOnly libs.junit_platform
+}
+
+// HACK: The 'quarkus-extension-processor' annotation processor has a hardcoded Maven bias.
+// During the 'compileJava' phase, it attempts to resolve the extension's GAV coordinates
+// (GroupId, ArtifactId, Version) by traversing up the directory tree looking for a 'pom.xml'
+// relative to its compilation CLASS_OUTPUT anchor.
+//
+// In a native Gradle build, no such file exists, which causes the processor to emit a warning:
+// "We could not detect the groupId and artifactId of this module...". 
+// Because this project enforces strict compilation via '-Werror', this warning promotes to a 
+// build-failing error.
+//
+// To satisfy the processor without maintaining a duplicate, static root Maven file, we 
+// dynamically generate a transient, minimal 'pom.xml' exactly where the processor expects it 
+// (build/classes/pom.xml) right before compilation begins.
+def generateExtensionPom = tasks.register('generateExtensionPom') {
+    def pomFile = layout.buildDirectory.file('classes/pom.xml')
+    outputs.file(pomFile)
+    
+    doLast {
+        pomFile.get().asFile.text = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>${project.group}</groupId>
+    <artifactId>${project.name}</artifactId>
+    <version>${project.version}</version>
+</project>
+"""
+    }
+}
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn(generateExtensionPom)
+}
+
+
