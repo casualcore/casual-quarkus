@@ -6,7 +6,8 @@ plugins {
 dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation "io.quarkus:quarkus-core-deployment:${quarkusPlatformVersion}"
-    implementation 'io.quarkiverse.ironjacamar:quarkus-ironjacamar-deployment:1.8.1'
+    implementation libs.ironjacamar_deployment
+    implementation "io.quarkus:quarkus-narayana-jta-deployment:${quarkusPlatformVersion}"
     implementation "io.quarkus:quarkus-scheduler-deployment:${quarkusPlatformVersion}"
     implementation project(':casual-quarkus')
 

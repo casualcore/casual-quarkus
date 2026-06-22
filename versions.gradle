@@ -2,8 +2,11 @@
 def gson_version = '2.13.1'
 def casual_version = '3.4.7'
 def casual_caller_version = '3.3.3'
+def ironjacamar_version = '1.8.3'
 
 ext.libs = [
+    ironjacamar: "io.quarkiverse.ironjacamar:quarkus-ironjacamar:${ironjacamar_version}",
+    ironjacamar_deployment: "io.quarkiverse.ironjacamar:quarkus-ironjacamar-deployment:${ironjacamar_version}",
     casual_api: "se.laz.casual:casual-api:${casual_version}",
     casual_api_spi_impl: "se.laz.casual:casual-api-spi-impl:${casual_version}",
     casual_inbound_api: "se.laz.casual:casual-inbound-api:${casual_version}",
