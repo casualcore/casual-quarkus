@@ -13,7 +13,7 @@ Currently wraps up `Casual JCA 3.4.7` and `Casual Caller 3.3.3`
 
 **Gradle:**
 ```groovy
-implementation 'se.laz.casual:casual-quarkus:1.0.0
+implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.1
 ```
 
 **Maven:**
@@ -21,7 +21,7 @@ implementation 'se.laz.casual:casual-quarkus:1.0.0
 <dependency>
     <groupId>se.laz.casual</groupId>
     <artifactId>casual-quarkus</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-beta.1</version>
 </dependency>
 ```
 
