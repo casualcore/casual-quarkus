@@ -3,8 +3,6 @@ plugins {
     id 'java-library'
     id 'groovy'
     id 'io.quarkus.extension'
-    id 'org.kordamp.gradle.jandex'
-
 }
 
 test {
@@ -86,10 +84,6 @@ def generateExtensionPom = tasks.register('generateExtensionPom') {
 
 tasks.named('compileJava', JavaCompile) {
     dependsOn(generateExtensionPom)
-}
-
-tasks.named('javadoc') {
-    dependsOn('jandex')
 }
 
 

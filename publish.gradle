@@ -79,6 +79,6 @@ publishing {
 }
 
 signing {
+    required { project.hasProperty("signing.keyId") }
     sign publishing.publications.mavenJava
 }
-
