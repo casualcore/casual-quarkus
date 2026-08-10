@@ -1,6 +1,6 @@
 {
     "domain": {
-        "name": "quarkus-casual-domain-one"
+        "name": "quarkus-casual-domain-two"
     },
     "unmanaged": true,
     "outbound":{
@@ -10,13 +10,13 @@
     "reverseInbound":[
         {
             "address": {
-                "host": "10.105.77.46",
+                "host": "localhost",
                 "port": 7780
             },
-            "size": 1
+            "size": 2
         }],
     "eventServer":{
-        "portNumber": 7698,
+        "portNumber": 9898,
         "useEpoll": true
     }
 }

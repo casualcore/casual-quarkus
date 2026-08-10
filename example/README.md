@@ -52,7 +52,7 @@ SimpleObject{id=42, name='bob'}
 
 Or to test the echo service:
 ```sh
-$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/casual%2fexample%2fjava%2fecho
+$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/echo
 Bazinga!
 ```
 
@@ -66,5 +66,34 @@ Note that the example application with the `peer` profile is exposing port 8000 
 Also note that if you want to run the examples that uses their own buffer handlers etc, you need to restart the application when you have changed the handlers even when running with `quarkusDev`. 
 This since the handlers are found during build time of the user application.
 
-There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
-Note, it needs a reverse outbound to connect to and currently only casual can provide that.
+## Reverse outbound and reverse inbound
+
+Reverse outbound and reverse inbound are symmetric features, so two `example-app` instances can be paired up:
+one listens ( reverse outbound ) and the other connects to it ( reverse inbound ). Once connected the listening
+instance can call services on the connecting instance as if it had a normal outbound connection towards it.
+
+Start the reverse outbound instance - it listens on port `7780` (`casual-config-reverse-outbound.json`) and its
+`casual` pool is backed by the reverse pool (`revout` profile):
+
+```sh
+QUARKUS_PROFILE=revout CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-reverse-outbound.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
+```
+
+Start the reverse inbound instance - it connects to `localhost:7780` with two connections
+(`casual-config-reverse-inbound.json`) and exposes its `@CasualService` services over them:
+
+```sh
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-reverse-inbound.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
+```
+
+Then call a service on the reverse outbound instance - the call travels over a connection established by the
+reverse inbound instance:
+
+```sh
+$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/echo
+Bazinga!
+```
+
+The same call through casual-caller (`/casualcaller` instead of `/casual`) uses the per instance connection
+factory entries - with n connected reverse inbound instances casual-caller sees n pools, each with its own
+service discovery and failover priority.

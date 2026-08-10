@@ -1,0 +1,38 @@
+{
+    "domain": {
+        "name": "quarkus-casual-db"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "inbound": {
+        "useEpoll": true,
+        "startup": {
+            "mode": "discover",
+            "services": [
+                "db_counter"
+            ]
+        }
+    },
+    "reverseInbound":[
+        {
+            "address": {
+                "host": "localhost",
+                "port": 7785
+            },
+            "size": 2
+        },
+        {
+            "address": {
+                "host": "localhost",
+                "port": 7786
+            },
+            "size": 2
+        }],
+    "eventServer":{
+        "portNumber": 7691,
+        "useEpoll": true
+    }
+}

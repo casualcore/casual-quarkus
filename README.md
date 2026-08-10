@@ -5,7 +5,7 @@ A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https:/
 
 Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
 
-Currently wraps up `Casual JCA 3.4.7` and `Casual Caller 3.3.3`
+Currently wraps up `Casual JCA 3.5.0-SNAPSHOT` and `Casual Caller 3.3.4-SNAPSHOT`
 
 ## Getting Started
 
@@ -13,7 +13,7 @@ Currently wraps up `Casual JCA 3.4.7` and `Casual Caller 3.3.3`
 
 **Gradle:**
 ```groovy
-implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.1
+implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.2-SNAPSHOT'
 ```
 
 **Maven:**
@@ -21,7 +21,7 @@ implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.1
 <dependency>
     <groupId>se.laz.casual</groupId>
     <artifactId>casual-quarkus</artifactId>
-    <version>1.0.0-beta.1</version>
+    <version>1.0.0-beta.2-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -130,6 +130,32 @@ quarkus.ironjacamar.other-pool.ra.kind=casual
 quarkus.ironjacamar.other-pool.ra.config.host=host-b
 quarkus.ironjacamar.other-pool.ra.config.port=7771
 ```
+
+## Reverse outbound
+
+The symmetric feature to reverse inbound: the EIS connects to a port configured in the casual configuration file
+(`reverseOutbound` - see [casual-java](https://github.com/casualcore/casual-java) for documentation) and after the
+handshake the connection is used as if it was a normal outbound connection. Consumption is through a completely
+standard pool configuration where `network-connection-pool-name` is set to the configured reverse outbound name:
+
+```properties
+quarkus.ironjacamar.casual.ra.kind=casual
+# host/port are unused for reverse pools but must be set
+quarkus.ironjacamar.casual.ra.config.host=reverse
+quarkus.ironjacamar.casual.ra.config.port=0
+quarkus.ironjacamar.casual.ra.config.network-connection-pool-name=myReverseOutbound
+# must be set for the pool to be used at all, the value itself is ignored for reverse pools
+quarkus.ironjacamar.casual.ra.config.network-connection-pool-size=1
+quarkus.ironjacamar.casual.ra.config.inbound-server-port=7772
+# no prefill - prefill creates unpinned managed connections and casual-caller only ever requests pinned ones
+quarkus.ironjacamar.casual.ra.cm.pool.config.min-size=0
+quarkus.ironjacamar.casual.ra.cm.pool.config.initial-size=0
+```
+
+`network-connection-pool-size` is ignored for reverse pools - the pool holds however many connections the
+connecting instances have established. casual-caller exposes each connected instance as its own connection factory
+entry: with n connected instances casual-caller sees n pools, each with its own service discovery, validity and
+failover priority.
 
 ## Example Application
 

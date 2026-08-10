@@ -1,8 +1,8 @@
 //-*- coding: utf-8-unix -*-
 def gson_version = '2.13.1'
-def casual_version = '3.4.8'
-def casual_caller_version = '3.3.3'
-def casual_quarkus_version = '1.0.0-beta.1'
+def casual_version = '3.5.0-SNAPSHOT'
+def casual_caller_version = '3.3.4-SNAPSHOT'
+def casual_quarkus_version = '1.0.0-beta.2-SNAPSHOT'
 
 ext.libs = [
     casual_quarkus: "se.laz.casual:casual-quarkus:${casual_quarkus_version}",

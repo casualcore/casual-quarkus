@@ -54,10 +54,11 @@ gradle.properties
 # H2 in example subproject
 ObjectStore/
 
+example/logs/
+
 *.log
 dump*
 secret.*
 
 *.class
 *.jar
-
