@@ -74,16 +74,19 @@ QUARKUS_PROFILE=reverse,two CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-confi
 
 Run the front application as before, then start the soak test script.
 
-### Chaos testing with reverse outbound
+### Automated chaos soak test harness
 
-While the soak test is running, test the following failure scenarios:
+To run automated continuous load while randomly terminating and restarting nodes:
 
-* **Terminate a node application:** The database application loses its reverse inbound connection to that node and reconnects using exponential backoff once the node restarts. The front application fails over to the surviving node in the meantime.
-* **Terminate the database application:** The reverse pools in both nodes empty out. Calls fail gracefully as during a Casual outage, and the pools automatically refill when the database application restarts and reconnects.
-* **Orderly system shutdown:** Terminate the processes gracefully in the following sequence: front application, node applications, and database application.
-
-After each scenario, check the logs for errors and verify that there are zero in-doubt transactions in the database application:
 ```sh
-find ObjectStore -type f 2>/dev/null
+# Run 1-hour chaos test with 50 connections
+./scripts/chaos-soak-test.sh 1h 50 60 30 random-node
+
+# Run with Netty PARANOID leak detection
+JAVA_OPTS="-Dio.netty.leakDetection.level=PARANOID" ./scripts/chaos-soak-test.sh 1h 50 60 30 random-node
 ```
-The command must return no files. Any returned file indicates an unresolved in-doubt transaction.
+
+The script automatically launches the topology, generates transactional load via `wrk`, executes chaos events at the configured interval, performs an orderly graceful shutdown, scans `ObjectStore` for in-doubt transactions, audits graceful process exits, and checks application logs for Netty buffer leaks.
+
+For detailed benchmarks and verification results, see [Chaos and Soak Test Results](test-results/chaos/README.md).
+

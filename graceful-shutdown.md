@@ -39,7 +39,7 @@ When a `SIGTERM` signal is delivered to an application, the following sequential
  │       - Any late outbound service calls are rejected immediately with TPENOENT.
  │
  ▼
-[ Hard Limit: e.g., 30s ] ──> Quarkus Delay Expires ──> JVM terminates cleanly.
+[ Hard Limit: e.g., 15s ] ──> Quarkus Delay Expires ──> JVM terminates cleanly.
 ```
 
 ## Domain disconnect and client throttling
@@ -83,7 +83,7 @@ The following properties configure graceful shutdown behavior:
 
 | Property | Default | Description |
 | :--- | :--- | :--- |
-| `quarkus.shutdown.delay` | `30s` | Mandatory fixed Quarkus quiet period window. |
+| `quarkus.shutdown.delay` | `15s` | Mandatory fixed Quarkus quiet period window. |
 | `casual.shutdown.wire-settle-delay-ms` | `1500` | Fixed pause (in milliseconds) allowing network frames to settle and client validators to run. |
 | `casual.shutdown.drain-poll-interval-ms` | `200` | Polling interval (in milliseconds) used by `ShutdownBarrier` to check transaction registries. |
 | `quarkus.shutdown.delay-enabled` | `true` | Enables Quarkus shutdown delay handling. Do not override this setting. |

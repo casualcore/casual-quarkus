@@ -163,7 +163,7 @@ The [`example/`](example/README.md) directory contains standalone Quarkus applic
 - **casual config file** -- showing basic usage. See the [casual-java](https://github.com/casualcore/casual-java) documentation for details
 - **example fielded file** -- used in the fielded test service
 - **user defined handlers** -- showing how a user application can implement their own ServiceHandler, BufferHandler and ServiceHandlerExtension
-- **applications used for soak testing**
+- **applications used for soak testing** -- see [Soak testing](example/soak-testing.md) and [Chaos test results](example/test-results/chaos/README.md)
 
 The example application consumes the extension from Maven Local. Before running the example application, build and publish the extension locally:
 
