@@ -87,3 +87,47 @@ The following properties configure graceful shutdown behavior:
 | `casual.shutdown.wire-settle-delay-ms` | `1500` | Fixed pause (in milliseconds) allowing network frames to settle and client validators to run. |
 | `casual.shutdown.drain-poll-interval-ms` | `200` | Polling interval (in milliseconds) used by `ShutdownBarrier` to check transaction registries. |
 | `quarkus.shutdown.delay-enabled` | `true` | Enables Quarkus shutdown delay handling. Do not override this setting. |
+
+> [!NOTE]
+> The appropriate value for `quarkus.shutdown.delay` depends on your specific topology and workload. If you have longer running transactions that you always want to be able to finish when nodes come and go, configure `quarkus.shutdown.delay` and the Kubernetes Pod `terminationGracePeriodSeconds` accordingly.
+
+## Shutdown delay vs. shutdown timeout
+
+In Quarkus, `quarkus.shutdown.delay` and `quarkus.shutdown.timeout` govern two distinct, sequential phases of the shutdown lifecycle:
+
+### 1. `quarkus.shutdown.delay` (Pre-shutdown quiet period)
+
+* **What it does:** An intentional pause before Quarkus begins tearing down any components or services.
+* **How it works:**
+  1. Quarkus receives a `SIGTERM` signal.
+  2. Quarkus fires `ShutdownDelayInitiatedEvent` (where `CasualShutdownDelayHandler` broadcasts domain disconnect and drains XA transactions).
+  3. Quarkus holds execution and waits for the full duration of the delay (e.g., `15s`). During this quiet window, Kubernetes propagates the pod's `Terminating` status to remove its IP from Endpoints/Ingress (for HTTP entry points), while Casual connected clients receive the Domain Disconnect message and stop routing new service calls to the node.
+* **Nature:** Fixed duration (Quarkus sleeps for the configured time).
+
+### 2. `quarkus.shutdown.timeout` (Teardown grace window)
+
+* **What it does:** The maximum deadline/timeout allowed during the actual teardown of resources (HTTP server, CDI beans, IronJacamar JCA pools, JDBC datasources, thread pools).
+* **How it works:**
+  1. Once the delay phase finishes, Quarkus begins closing active HTTP connections, shutting down pools, and terminating threads.
+  2. If all resources finish shutting down in 200 ms, Quarkus exits immediately—it does not wait for the timeout.
+  3. If some thread or connection hangs, Quarkus forcefully aborts once `quarkus.shutdown.timeout` expires.
+* **Nature:** Upper bound / safety cutoff (non-blocking if teardown completes quickly).
+
+### Summary of the lifecycle
+
+```text
+[ SIGTERM Received ]
+ │
+ ├── Phase 1: Pre-Shutdown Delay (`quarkus.shutdown.delay=15s`)
+ │   ├── Fires ShutdownDelayInitiatedEvent (Casual domain disconnect & XA drain)
+ │   └── Pauses for remaining delay (allows K8s endpoints & Casual peers to reroute)
+ │
+ ├── Phase 2: Active Teardown (`quarkus.shutdown.timeout=...`)
+ │   ├── Closes HTTP listeners, JCA pools, DataSource, thread pools
+ │   └── Exits as soon as teardown finishes (usually ~100–300 ms, capped at timeout)
+ │
+ ▼
+[ JVM Process Exits ]
+```
+
+Keeping `quarkus.shutdown.timeout` at `5s`–`15s` ensures that if a resource hangs during teardown, it won't stall the container past the Kubernetes hard-kill boundary (`terminationGracePeriodSeconds`).
