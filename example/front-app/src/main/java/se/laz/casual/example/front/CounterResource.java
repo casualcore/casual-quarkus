@@ -7,7 +7,6 @@ package se.laz.casual.example.front;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.SystemException;
-import jakarta.transaction.TransactionManager;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -19,10 +18,7 @@ import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.CasualBuffer;
 import se.laz.casual.api.buffer.ServiceReturn;
 import se.laz.casual.api.buffer.type.OctetBuffer;
-import se.laz.casual.api.flags.AtmiFlags;
 import se.laz.casual.api.flags.ErrorState;
-import se.laz.casual.api.flags.Flag;
-import se.laz.casual.connection.caller.CasualCaller;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,39 +26,62 @@ import java.io.InputStream;
 @Path("/casualcallersync")
 public class CounterResource
 {
-    private final CasualCaller casualCaller;
-    private final TransactionManager transactionManager;
+    private static final int MAX_ATTEMPTS = 3;
+    private static final long RETRY_DELAY_MILLIS = 50;
+    private final TransactionalCounterCall counterCall;
 
     @Inject
-    public CounterResource(CasualCaller casualCaller, TransactionManager transactionManager)
+    public CounterResource(TransactionalCounterCall counterCall)
     {
-        this.casualCaller = casualCaller;
-        this.transactionManager = transactionManager;
+        this.counterCall = counterCall;
     }
 
     @POST
     @Consumes("application/casual-x-octet")
     @Path("{serviceName}")
-    @Transactional(Transactional.TxType.REQUIRED)
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
     public Response serviceRequest(
             @PathParam("serviceName") String serviceName,
             InputStream inputStream) throws IOException, SystemException
     {
         byte[] data = IOUtils.toByteArray(inputStream);
-        Flag<AtmiFlags> flags = Flag.of(AtmiFlags.NOFLAG);
         CasualBuffer buffer = OctetBuffer.of(data);
-        ServiceReturn<CasualBuffer> result = casualCaller.tpcall(serviceName, buffer, flags);
-        if (result.getErrorState() == ErrorState.TPENOENT)
+        try
         {
-            transactionManager.setRollbackOnly();
+            ServiceReturn<CasualBuffer> result = counterCall.call(serviceName, buffer);
+            for (int attempt = 1; attempt < MAX_ATTEMPTS && result.getErrorState() == ErrorState.TPESVCFAIL; attempt++)
+            {
+                // During shutdown, the node can receive requests before the front receives domain disconnect.
+                // The draining node rejects its calls towards the database locally with TPENOENT, which
+                // CounterForwarder reports to the front as TPESVCFAIL. This shutdown race is expected.
+                // Wait after rollback so disconnect can arrive before the next transaction.
+                Thread.sleep(RETRY_DELAY_MILLIS);
+                result = counterCall.call(serviceName, buffer);
+            }
+            if (result.getErrorState() == ErrorState.TPENOENT)
+            {
+                return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                               .entity(result.getErrorState().name())
+                               .build();
+            }
+            if (result.getErrorState() != ErrorState.OK)
+            {
+                throw new CasualRuntimeException("Error: " + result.getErrorState().name());
+            }
+            return Response.ok().entity(result.getReplyBuffer().getBytes().get(0)).build();
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-                           .entity(result.getErrorState().name())
+                           .entity("Retry interrupted")
                            .build();
         }
-        if (result.getErrorState() != ErrorState.OK)
+        catch (CasualRuntimeException e)
         {
-            throw new CasualRuntimeException("Error: " + result.getErrorState().name());
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                           .entity(e.getMessage())
+                           .build();
         }
-        return Response.ok().entity(result.getReplyBuffer().getBytes().get(0)).build();
     }
 }

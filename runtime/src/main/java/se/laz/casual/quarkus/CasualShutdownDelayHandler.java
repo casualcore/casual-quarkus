@@ -35,20 +35,25 @@ public class CasualShutdownDelayHandler
     private static final System.Logger LOG = System.getLogger(CasualShutdownDelayHandler.class.getName());
     long pollIntervalMs;
     long wireSettleDelayMs;
+    long drainTimeoutMs;
 
     @Inject
     public CasualShutdownDelayHandler(@ConfigProperty(name = "casual.shutdown.drain-poll-interval-ms", defaultValue = "200") long pollIntervalMs,
-                                      @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "1500") long wireSettleDelayMs)
+                                      @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "1500") long wireSettleDelayMs,
+                                      @ConfigProperty(name = "casual.shutdown.drain-timeout-ms", defaultValue = "10000") long drainTimeoutMs)
     {
         this.pollIntervalMs = pollIntervalMs;
         this.wireSettleDelayMs = wireSettleDelayMs;
+        this.drainTimeoutMs = drainTimeoutMs;
     }
 
     void onShutdown(@Observes ShutdownDelayInitiatedEvent event)
     {
-        LOG.log(System.Logger.Level.INFO, "Shutdown initiated: beginning casual graceful shutdown");
+        LOG.log(System.Logger.Level.INFO, () -> "Shutdown initiated: beginning casual graceful shutdown; "
+                + pendingTransactionCounts());
         LOG.log(System.Logger.Level.INFO, "wire settle delay: " + wireSettleDelayMs + "ms");
         LOG.log(System.Logger.Level.INFO, "drain poll interval: " + pollIntervalMs + "ms");
+        LOG.log(System.Logger.Level.INFO, "drain timeout: " + drainTimeoutMs + "ms");
 
         // 1. Domain going down, no new outbound service calls will be allowed
         //    They will all return TPENOENT
@@ -71,11 +76,38 @@ public class CasualShutdownDelayHandler
             Thread.currentThread().interrupt();
         }
 
-        // 4. Drain current in flight work
+        // 4. Drain current in flight work with configurable timeout deadline
         Predicate workIsPending = () -> CasualQuarkusResourceAdapter.getInboundTransactionRegistry().hasPending()
                 || CasualResourceManager.getInstance().hasPending();
-        ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(pollIntervalMs, workIsPending);
-        shutdownBarrier.intermittentSleep();
-        LOG.log(System.Logger.Level.INFO, () -> "Casual graceful shutdown complete");
+        long deadline = drainTimeoutMs > 0 ? System.currentTimeMillis() + drainTimeoutMs : Long.MAX_VALUE;
+        while (workIsPending.eval() && System.currentTimeMillis() < deadline)
+        {
+            try
+            {
+                Thread.sleep(pollIntervalMs);
+            }
+            catch (InterruptedException _)
+            {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        if (workIsPending.eval())
+        {
+            LOG.log(System.Logger.Level.WARNING, () -> "Drain timeout reached (" + drainTimeoutMs
+                    + "ms) with pending work remaining, proceeding with shutdown; " + pendingTransactionCounts());
+        }
+        else
+        {
+            LOG.log(System.Logger.Level.INFO, () -> "Casual graceful shutdown complete");
+        }
+    }
+
+    private static String pendingTransactionCounts()
+    {
+        return "pending inbound transaction entries="
+                + CasualQuarkusResourceAdapter.getInboundTransactionRegistry().getPendingTransactionCount()
+                + ", pending outbound transaction entries="
+                + CasualResourceManager.getInstance().getPendingTransactionCount();
     }
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #-*- coding: utf-8-unix -*-
 
-# Chaos and Soak Test Harness for Casual Quarkus Reverse Outbound Topology
+# Chaos and Soak Test Harness for Casual Quarkus
 # Runs continuous transactional load against front-app while randomly terminating
 # and restarting backend nodes and database applications, then verifies zero in-doubt transactions.
 
-set -e
+set -euo pipefail
 
 # Default settings
 DURATION=${1:-"2h"}
@@ -13,15 +13,40 @@ CONCURRENCY=${2:-"50"}
 CHAOS_INTERVAL=${3:-"60"}
 GRACE_PERIOD=${4:-30} # Kubernetes default grace period in seconds
 CHAOS_MODE=${5:-"random-node"} # random-node or all
+RESTART_PAUSE=${RESTART_PAUSE:-5}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LUA_SCRIPT="$SCRIPT_DIR/soak-post.lua"
 DATA_FILE="$BASE_DIR/curl-data"
 RUN_ID="chaos-$(date +%Y%m%d-%H%M%S)"
-LOG_DIR="$BASE_DIR/logs/$RUN_ID"
+mkdir -p "$BASE_DIR/logs"
+LOG_DIR=$(mktemp -d "$BASE_DIR/logs/$RUN_ID-XXXXXX")
+STORE_ROOT="$LOG_DIR/ObjectStore"
+cd "$BASE_DIR"
 
-mkdir -p "$LOG_DIR"
+fail() {
+    echo "Error: $*" >&2
+    exit 1
+}
+
+for value in "$CONCURRENCY" "$CHAOS_INTERVAL" "$GRACE_PERIOD" "$RESTART_PAUSE"; do
+    [[ "$value" =~ ^[1-9][0-9]*$ ]] || fail "Concurrency, chaos interval, grace period and restart pause must be positive integers."
+done
+case "$CHAOS_MODE" in
+    random-node|all) ;;
+    *) fail "Unknown chaos mode: $CHAOS_MODE (expected random-node or all)." ;;
+esac
+for executable in wrk curl java find; do
+    command -v "$executable" >/dev/null || fail "Required executable not found: $executable"
+done
+for app in front-app node-app db-app; do
+    [[ -r "$BASE_DIR/$app/build/$app-1.0.0-runner.jar" ]] || fail "Build $app before running this script."
+done
+[[ -r "$LUA_SCRIPT" ]] || fail "Missing load script: $LUA_SCRIPT"
+for app in front node1 node2 db; do
+    mkdir -p "$STORE_ROOT/$app"
+done
 
 echo "========================================================"
 echo "  CASUAL QUARKUS CHAOS SOAK TEST"
@@ -34,21 +59,16 @@ echo "Concurrency:    $CONCURRENCY"
 echo "Chaos Interval: ${CHAOS_INTERVAL}s"
 echo "Grace Period:   ${GRACE_PERIOD}s (k8s default)"
 echo "Chaos Mode:     $CHAOS_MODE"
+echo "Restart pause:  ${RESTART_PAUSE}s"
+echo "Object stores:  $STORE_ROOT"
 echo "========================================================"
-
-# Validate requirements
-if ! command -v wrk &> /dev/null; then
-    echo "Error: 'wrk' is required but not installed."
-    exit 1
-fi
 
 if [ ! -f "$DATA_FILE" ]; then
     echo "Creating payload file $DATA_FILE..."
     echo -n "Bazinga!" > "$DATA_FILE"
 fi
 
-# Clean up any leftover ObjectStore from previous runs
-rm -rf "$BASE_DIR/ObjectStore"
+# Keep each run's stores for inspection and reuse them for every restart in that run.
 
 # PIDs and counters
 PID_DB=""
@@ -72,9 +92,16 @@ cleanup() {
     [ -n "$PID_NODE2" ] && kill -9 "$PID_NODE2" 2>/dev/null || true
     [ -n "$PID_DB" ] && kill -9 "$PID_DB" 2>/dev/null || true
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 JAVA_OPTS="${JAVA_OPTS:-}"
+SHUTDOWN_LOG_OPTS=(
+    '-Dquarkus.log.category."se.laz.casual.network.outbound.DomainDisconnectHandler".level=INFO'
+    '-Dquarkus.log.category."se.laz.casual.network.outbound.NettyNetworkConnection".level=INFO'
+    '-Dquarkus.log.category."se.laz.casual.quarkus.CasualShutdownDelayHandler".level=INFO'
+)
 
 start_node1() {
     echo "[$(date +%T)] Starting Node 1 (reverse outbound port 7785, inbound 7771)..."
@@ -82,7 +109,9 @@ start_node1() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-one-reverse.json" \
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
-    java $JAVA_OPTS -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node1.log" 2>&1 &
+    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node1" \
+    -Dquarkus.transaction-manager.node-name="chaos-node1" -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node1.log" 2>&1 &
     PID_NODE1=$!
 }
 
@@ -92,7 +121,9 @@ start_node2() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-two-reverse.json" \
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
-    java $JAVA_OPTS -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node2.log" 2>&1 &
+    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node2" \
+    -Dquarkus.transaction-manager.node-name="chaos-node2" -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node2.log" 2>&1 &
     PID_NODE2=$!
 }
 
@@ -101,7 +132,9 @@ start_db() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-db-reverse.json" \
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
-    java $JAVA_OPTS -jar "$BASE_DIR/db-app/build/db-app-1.0.0-runner.jar" >> "$LOG_DIR/db.log" 2>&1 &
+    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/db" \
+    -Dquarkus.transaction-manager.node-name="chaos-db" -jar "$BASE_DIR/db-app/build/db-app-1.0.0-runner.jar" >> "$LOG_DIR/db.log" 2>&1 &
     PID_DB=$!
 }
 
@@ -110,7 +143,9 @@ start_front() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-front.json" \
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
-    java $JAVA_OPTS -jar "$BASE_DIR/front-app/build/front-app-1.0.0-runner.jar" >> "$LOG_DIR/front.log" 2>&1 &
+    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/front" \
+    -Dquarkus.transaction-manager.node-name="chaos-front" -jar "$BASE_DIR/front-app/build/front-app-1.0.0-runner.jar" >> "$LOG_DIR/front.log" 2>&1 &
     PID_FRONT=$!
 }
 
@@ -124,6 +159,7 @@ kill_app() {
         kill -15 "$target_pid" 2>/dev/null || true
 
         local loops=$(( grace_seconds * 2 ))
+        local i
         local exited=false
         for (( i=1; i<=loops; i++ )); do
             if ! kill -0 "$target_pid" 2>/dev/null; then
@@ -154,31 +190,47 @@ start_db
 sleep 2
 start_front
 
-echo
-echo "--- Waiting for system to become healthy ---"
-MAX_ATTEMPTS=40
-ATTEMPT=0
-HEALTHY=false
+assert_running() {
+    local pid
+    for pid in "$PID_FRONT" "$PID_NODE1" "$PID_NODE2" "$PID_DB"; do
+        kill -0 "$pid" 2>/dev/null || fail "Application PID $pid exited unexpectedly; inspect $LOG_DIR."
+    done
+}
 
-while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-    ATTEMPT=$((ATTEMPT + 1))
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-        -H 'Content-Type: application/casual-x-octet' \
-        --data-binary @"$DATA_FILE" \
-        "http://localhost:8080/casualcallersync/counter" 2>/dev/null || echo "000")
-    if [ "$HTTP_CODE" = "200" ]; then
-        HEALTHY=true
-        echo "Endpoint healthy after $ATTEMPT attempts (HTTP $HTTP_CODE)."
-        break
-    fi
-    sleep 1
-done
+wait_for_endpoint() {
+    local deadline=$((SECONDS + 120))
+    local http_code port ready
+    while (( SECONDS < deadline )); do
+        assert_running
+        ready=true
+        for port in 8081 8082 8083; do
+            if ! http_code=$(curl --silent --connect-timeout 2 --max-time 5 \
+                    --output /dev/null --write-out '%{http_code}' "http://localhost:$port/"); then
+                ready=false
+                break
+            fi
+            [[ "$http_code" =~ ^[234][0-9][0-9]$ ]] || { ready=false; break; }
+        done
+        if [[ "$ready" == false ]]; then
+            sleep 1
+            continue
+        fi
+        if http_code=$(curl --silent --connect-timeout 2 --max-time 5 \
+                --output /dev/null --write-out '%{http_code}' --request POST \
+                --header 'Content-Type: application/casual-x-octet' \
+                --data-binary @"$DATA_FILE" \
+                'http://localhost:8080/casualcallersync/counter'); then
+            if [[ "$http_code" == 200 ]]; then
+                echo "[$(date +%T)] Transactional endpoint responds successfully."
+                return
+            fi
+        fi
+        sleep 1
+    done
+    fail "Transactional endpoint did not recover within the readiness window; inspect $LOG_DIR."
+}
 
-if [ "$HEALTHY" = false ]; then
-    echo "Error: Endpoint failed to become healthy within $MAX_ATTEMPTS seconds. Logs:"
-    tail -n 20 "$LOG_DIR/front.log" || true
-    exit 1
-fi
+wait_for_endpoint
 
 # 2. Launch wrk load generator
 echo
@@ -205,6 +257,7 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
         break
     fi
 
+    assert_running
     STEP=$((STEP + 1))
 
     if [ "$CHAOS_MODE" = "random-node" ]; then
@@ -212,12 +265,12 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
         if [ "$NODE_CHOICE" -eq 1 ]; then
             echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 1 ==="
             kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
-            sleep 5
+            sleep "$RESTART_PAUSE"
             start_node1
         else
             echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 2 ==="
             kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
-            sleep 5
+            sleep "$RESTART_PAUSE"
             start_node2
         fi
     else
@@ -226,19 +279,19 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
             1)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 1 ==="
                 kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
-                sleep 5
+                sleep "$RESTART_PAUSE"
                 start_node1
                 ;;
             2)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 2 ==="
                 kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
-                sleep 5
+                sleep "$RESTART_PAUSE"
                 start_node2
                 ;;
             3)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Database App ==="
                 kill_app "Database App" "$PID_DB" "$GRACE_PERIOD"
-                sleep 5
+                sleep "$RESTART_PAUSE"
                 start_db
                 ;;
             0)
@@ -246,18 +299,26 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
                 kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
                 sleep 4
                 start_node1
-                sleep 4
+                wait_for_endpoint
                 kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
                 sleep 4
                 start_node2
                 ;;
         esac
     fi
+    wait_for_endpoint
 done
 
 # Wait for wrk to fully wrap up
-wait "$PID_WRK" 2>/dev/null || true
+WRK_STATUS=0
+wait "$PID_WRK" || WRK_STATUS=$?
 PID_WRK=""
+[[ "$WRK_STATUS" -eq 0 ]] || fail "wrk exited with status $WRK_STATUS; inspect $WRK_OUT."
+[[ "$STEP" -gt 0 ]] || fail "No chaos events occurred; increase the duration or reduce the interval."
+WRK_SUCCESS=$(sed -n 's/^WRK_SUCCESS://p' "$WRK_OUT")
+[[ "$WRK_SUCCESS" =~ ^[0-9]+$ ]] || fail "wrk did not produce a valid success count."
+[[ "$WRK_SUCCESS" -gt 0 ]] || fail "No successful responses were recorded under load."
+wait_for_endpoint
 
 echo
 echo "--- Load test completed. Allowing 5 seconds for in-flight requests and recovery ---"
@@ -286,8 +347,15 @@ echo "========================================================"
 echo "  TEST RESULTS & TRANSACTION INTEGRITY VERIFICATION"
 echo "========================================================"
 
-IN_DOUBT_FILES=$(find "$BASE_DIR/ObjectStore" -type f 2>/dev/null || true)
-IN_DOUBT_COUNT=$(echo "$IN_DOUBT_FILES" | grep -v '^$' | wc -l || true)
+IN_DOUBT_MANIFEST="$LOG_DIR/in-doubt-files.txt"
+: > "$IN_DOUBT_MANIFEST"
+for app in front node1 node2 db; do
+    store="$STORE_ROOT/$app"
+    [[ -d "$store" && -r "$store" && -x "$store" ]] || fail "Transaction store is missing or unreadable: $store"
+    find "$store" -type f -print >> "$IN_DOUBT_MANIFEST" || fail "Cannot inspect transaction store: $store"
+done
+IN_DOUBT_COUNT=$(wc -l < "$IN_DOUBT_MANIFEST")
+IN_DOUBT_FILES=$(cat "$IN_DOUBT_MANIFEST")
 
 if [ "$IN_DOUBT_COUNT" -eq 0 ]; then
     echo -e "\033[0;32m[PASS]\033[0m Zero in-doubt transactions detected in ObjectStore!"
