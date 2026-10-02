@@ -12,10 +12,6 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import se.laz.casual.jca.CasualResourceManager;
 import se.laz.casual.jca.Predicate;
-import se.laz.casual.jca.RuntimeInformation;
-import se.laz.casual.jca.ShutdownBarrier;
-import se.laz.casual.network.InboundDeactivatedContext;
-import se.laz.casual.network.InboundTopologyUpdateContext;
 
 /**
  * Observes Quarkus shutdown delay to perform early graceful shutdown of casual inbound.
@@ -39,7 +35,7 @@ public class CasualShutdownDelayHandler
 
     @Inject
     public CasualShutdownDelayHandler(@ConfigProperty(name = "casual.shutdown.drain-poll-interval-ms", defaultValue = "200") long pollIntervalMs,
-                                      @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "1500") long wireSettleDelayMs,
+                                      @ConfigProperty(name = "casual.shutdown.wire-settle-delay-ms", defaultValue = "500") long wireSettleDelayMs,
                                       @ConfigProperty(name = "casual.shutdown.drain-timeout-ms", defaultValue = "10000") long drainTimeoutMs)
     {
         this.pollIntervalMs = pollIntervalMs;
@@ -55,17 +51,11 @@ public class CasualShutdownDelayHandler
         LOG.log(System.Logger.Level.INFO, "drain poll interval: " + pollIntervalMs + "ms");
         LOG.log(System.Logger.Level.INFO, "drain timeout: " + drainTimeoutMs + "ms");
 
-        // 1. Domain going down, no new outbound service calls will be allowed
-        //    They will all return TPENOENT
-        RuntimeInformation.setDomainIsBeingShutdown(true);
+        // 1. Mark the domain as going down and notify connected clients immediately so they stop
+        //    routing service and queue calls here. XA calls remain available for in-flight work.
+        CasualQuarkusResourceAdapter.prepareEndpointDeactivation();
 
-        // 2. Notify connected clients immediately so they stop routing traffic here
-        //    besides XA calls (for service/queue calls already in flight)
-        InboundDeactivatedContext.domainDisconnect();
-        InboundDeactivatedContext.clear();
-        InboundTopologyUpdateContext.clear();
-
-        // 3. Wait for the network wire to settle and late packets to land.
+        // 2. Wait for the network wire to settle and late packets to land.
         //    This gives the connected clients time to process the disconnect.
         try
         {
@@ -76,7 +66,7 @@ public class CasualShutdownDelayHandler
             Thread.currentThread().interrupt();
         }
 
-        // 4. Drain current in flight work with configurable timeout deadline
+        // 3. Drain current in flight work with configurable timeout deadline
         Predicate workIsPending = () -> CasualQuarkusResourceAdapter.getInboundTransactionRegistry().hasPending()
                 || CasualResourceManager.getInstance().hasPending();
         long deadline = drainTimeoutMs > 0 ? System.currentTimeMillis() + drainTimeoutMs : Long.MAX_VALUE;

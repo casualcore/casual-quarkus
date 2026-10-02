@@ -2,132 +2,162 @@
 
 # Casual Quarkus extension: graceful shutdown
 
-This document details how the Casual Quarkus JCA extension orchestrates a transactionally safe graceful shutdown when an application receives a `SIGTERM` signal.
+The Casual Quarkus extension coordinates Casual XA work with the two-phase Quarkus shutdown lifecycle. This coordination lets connected domains stop sending service traffic while existing XA branches finish.
 
-## Overview
+For the Quarkus lifecycle contract, see [Application initialization and termination](https://quarkus.io/guides/lifecycle/#graceful-shutdown).
 
-Distributed XA transactions require strict synchronization via the transaction coordinator (Narayana). When an application is terminated under heavy load, terminating the JVM immediately or abruptly closing network sockets causes in-doubt transactions and database inconsistencies.
+## Shutdown lifecycle
 
-To prevent this, the Casual extension implements a graceful shutdown mechanism hooked into the Quarkus lifecycle. 
+When the process receives `SIGTERM`, Quarkus runs two sequential phases.
 
-It ensures that:
+### Phase 1: Delay
 
-* Connected clients are notified to stop routing new traffic to the terminating application.
-* The network wire is allowed to settle.
-* In-flight XA transactions receive sufficient time to finish their two-phase commit (2PC) cycles.
-* Late-arriving outbound service requests from the terminating application fail fast with `TPENOENT`.
+During the delay phase, Quarkus performs the following actions:
+
+* If SmallRye Health is present, the readiness check reports `DOWN` and its HTTP endpoint returns `503`.
+* The HTTP server continues accepting and processing requests.
+* Quarkus fires `ShutdownDelayInitiatedEvent`.
+* After all synchronous event observers return, Quarkus waits for `quarkus.shutdown.delay` to elapse.
+
+`CasualShutdownDelayHandler` observes `ShutdownDelayInitiatedEvent`. The observer blocks shutdown while it performs the Casual shutdown sequence. Its execution time is additional to `quarkus.shutdown.delay`.
+
+```text
+Phase 1 duration = Casual handler duration + quarkus.shutdown.delay
+
+Casual handler duration = wire-settle delay + transaction-drain duration
+```
+
+When the drain deadline expires during a polling sleep, the handler can return up to one poll interval after the configured timeout.
+
+The handler performs these steps:
+
+1. It marks the local domain as disconnecting. New outbound service and queue calls fail with `TPENOENT`.
+2. It sends a domain disconnect message to connected clients. Clients stop routing new service and queue calls to the domain while continuing to allow XA coordination calls for existing transactions.
+3. It waits for `casual.shutdown.wire-settle-delay-ms`. This delay gives peers time to process the disconnect and lets network messages already in transit arrive.
+4. It checks the inbound and outbound transaction registries every `casual.shutdown.drain-poll-interval-ms`.
+5. It returns when both registries are empty or when `casual.shutdown.drain-timeout-ms` expires.
+
+If the drain timeout expires, the handler logs the remaining inbound and outbound entry counts and allows shutdown to continue. A value of `0` for `casual.shutdown.drain-timeout-ms` disables the deadline and allows the handler to wait indefinitely.
+
+### Phase 2: Shutdown
+
+After phase 1, Quarkus starts extension and CDI teardown. Quarkus also stops accepting new HTTP requests and waits for supported active requests to finish.
+
+`quarkus.shutdown.timeout` bounds the wait for active requests. Quarkus currently documents graceful request tracking for the HTTP extension. Do not treat this property as a general deadline for every extension cleanup operation.
+
+Methods annotated with `@Shutdown` and observers of `ShutdownEvent` run during this phase. IronJacamar deactivates the resource adapter and closes its connection-management infrastructure during the same teardown phase.
 
 ## Timeline
 
-When a `SIGTERM` signal is delivered to an application, the following sequential phases execute within the `quarkus.shutdown.delay` window:
-
 ```text
-[ SIGTERM Received ]
- │
- ├── 1. Application marked as disconnecting - any new outbound call returns TPENOENT.
- │   └── Application broadcasts a Domain Disconnect message to all connected clients.
- │
- ├── 2. Wire-Settle Phase (Fixed Pause: Default 1500ms)
- │   └── The application pauses execution to ensure:
- │       - Connected clients receive the disconnect message and stop routing new service traffic.
- │       - The client application's 1-second timer-based Connection Validator fires at least once.
- │       - Late packets already in flight on the network wire land safely.
- │
- ├── 3. Transaction Draining Phase (Dynamic: Up to the remainder of the shutdown delay window)
- │   └── The ShutdownBarrier actively polls internal registries:
- │       - Pending transactions in the Inbound/Outbound registries complete.
- │       - Any late outbound service calls are rejected immediately with TPENOENT.
- │
- ▼
-[ Hard Limit: e.g., 15s ] ──> Quarkus Delay Expires ──> JVM terminates cleanly.
+SIGTERM
+  |
+  |  Phase 1: Delay
+  |  Readiness reports DOWN; HTTP continues serving requests
+  |
+  +-- ShutdownDelayInitiatedEvent
+  |     +-- Mark the Casual domain as disconnecting
+  |     +-- Send domain disconnect
+  |     +-- Wait for the wire-settle delay
+  |     +-- Drain Casual XA work until empty or timed out
+  |
+  +-- Wait for quarkus.shutdown.delay
+  |
+  |  Phase 2: Shutdown
+  |  Stop accepting HTTP requests and begin framework teardown
+  |
+  +-- Wait for supported active requests, bounded by quarkus.shutdown.timeout
+  +-- Run ShutdownEvent observers and @Shutdown methods
+  +-- Deactivate IronJacamar and other extensions
+  |
+Process exits
 ```
 
-## Domain disconnect and client throttling
+## Transaction registries
 
-### Shutdown sequence starts
+The handler checks these registries:
 
-* The terminating application is marked as `disconnecting`. Any new outbound calls return `TPENOENT` immediately without reaching network resources.
-* The application sends a domain disconnect message to all connected clients.
-* When a client receives this message, it marks the network connection as `disconnecting`. Only XA coordination calls are permitted over a disconnecting connection; service and queue calls are rejected.
+* `CasualInboundTransactionRegistry` tracks active inbound execution contexts.
+* `CasualResourceManager` tracks active outbound XA resources.
 
-### Client handles the domain disconnect message
+The logged counts are registry-entry counts. During concurrent updates, they provide an operational snapshot and do not necessarily represent distinct global transactions.
 
-Clients run a background timer-based validation bean to check pool health. 
+When both registries are empty after the wire-settle delay, the handler does not wait for a drain poll. When work remains, the handler sleeps for the configured poll interval between checks.
 
-The validator uses standard JCA connection acquisition (`getConnection()`) to verify whether the pool is connected and whether it is marked as `disconnecting`. If marked as disconnecting or if connection acquisition fails, the validator evicts the pool from active routing.
+## Configuration
 
-### Wire-settle delay (`casual.shutdown.wire-settle-delay-ms`)
+The extension currently supplies these defaults:
 
-Because the validation bean in a connected client operates on a 1-second interval, the terminating application pauses execution for a fixed duration before evaluating its transaction registries.
-
-Configured by default to `1500ms`, this pause guarantees that connected clients complete at least one validation cycle, preventing new service traffic from reaching the terminating application before transaction draining begins.
-
-### Transaction draining
-
-Once the wire-settle delay expires, the extension activates its `ShutdownBarrier`. The barrier polls the following internal tracking registries every `casual.shutdown.drain-poll-interval-ms` (default `200ms`):
-
-* `CasualInboundTransactionRegistry`: Tracks active inbound service execution contexts.
-* `CasualResourceManager`: Tracks active outbound calls.
-
-The barrier keeps the shutdown thread blocked while `hasPending()` returns `true` on either registry. Once both registries reach zero, the barrier releases, allowing Quarkus to tear down resources cleanly.
-
-## Potential log entries during termination under heavy load
-
-During heavy load, you might observe warning logs on downstream dependencies (such as a database application) indicating an aborted transaction or a rollback failure during service invocation.
-
-This behavior is expected and transactionally safe. When an application is in its draining phase, late-arriving service calls fail fast with `TPENOENT` from the network layer. Because Narayana was aware of the upstream transaction initiation but the service branch was rejected, it drives an explicit downstream rollback to clean up resources.
-
-## Configuration properties
-
-The following properties configure graceful shutdown behavior:
-
-| Property | Default | Description |
+| Property | Default | Purpose |
 | :--- | :--- | :--- |
-| `quarkus.shutdown.delay` | `15s` | Mandatory fixed Quarkus quiet period window. |
-| `casual.shutdown.wire-settle-delay-ms` | `1500` | Fixed pause (in milliseconds) allowing network frames to settle and client validators to run. |
-| `casual.shutdown.drain-poll-interval-ms` | `200` | Polling interval (in milliseconds) used by `ShutdownBarrier` to check transaction registries. |
-| `quarkus.shutdown.delay-enabled` | `true` | Enables Quarkus shutdown delay handling. Do not override this setting. |
+| `quarkus.shutdown.delay-enabled` | `true` | Enables the Quarkus delay phase and `ShutdownDelayInitiatedEvent`. Keep this build-time property enabled because Casual transaction draining runs from this event. |
+| `quarkus.shutdown.delay` | `0s` | Keeps Quarkus in phase 1 after the Casual handler returns. Use a nonzero value when your infrastructure needs time to observe the readiness change before shutdown continues. |
+| `casual.shutdown.wire-settle-delay-ms` | `500` | Waits for peers to process domain disconnect and for messages already in transit to arrive. |
+| `casual.shutdown.drain-poll-interval-ms` | `200` | Controls how frequently the handler checks the transaction registries. |
+| `casual.shutdown.drain-timeout-ms` | `10000` | Limits transaction draining after the wire-settle delay. Set it to `0` to wait indefinitely. |
 
-> [!NOTE]
-> The appropriate value for `quarkus.shutdown.delay` depends on your specific topology and workload. If you have longer running transactions that you always want to be able to finish when nodes come and go, configure `quarkus.shutdown.delay` and the Kubernetes Pod `terminationGracePeriodSeconds` accordingly.
+Your application configures `quarkus.shutdown.timeout`. Quarkus does not provide a shutdown timeout unless you set one.
 
-## Shutdown delay vs. shutdown timeout
+### Choose the Quarkus delay
 
-In Quarkus, `quarkus.shutdown.delay` and `quarkus.shutdown.timeout` govern two distinct, sequential phases of the shutdown lifecycle:
+`quarkus.shutdown.delay` does not provide the Casual transaction-drain budget. `CasualShutdownDelayHandler` already blocks phase 1 while it drains Casual work.
 
-### 1. `quarkus.shutdown.delay` (Pre-shutdown quiet period)
+If your application receives HTTP traffic through readiness-aware infrastructure, configure enough Quarkus delay for that infrastructure to observe the failed readiness check and stop routing traffic. During this delay, Quarkus continues to serve HTTP requests normally.
 
-* **What it does:** An intentional pause before Quarkus begins tearing down any components or services.
-* **How it works:**
-  1. Quarkus receives a `SIGTERM` signal.
-  2. Quarkus fires `ShutdownDelayInitiatedEvent` (where `CasualShutdownDelayHandler` broadcasts domain disconnect and drains XA transactions).
-  3. Quarkus holds execution and waits for the full duration of the delay (e.g., `15s`). During this quiet window, Kubernetes propagates the pod's `Terminating` status to remove its IP from Endpoints/Ingress (for HTTP entry points), while Casual connected clients receive the Domain Disconnect message and stop routing new service calls to the node.
-* **Nature:** Fixed duration (Quarkus sleeps for the configured time).
+The extension defaults `quarkus.shutdown.delay` to `0s`. The Casual handler still runs because `quarkus.shutdown.delay-enabled` remains `true`. If the application has a request source that depends on Quarkus readiness propagation, configure a nonzero delay that covers the propagation time.
 
-### 2. `quarkus.shutdown.timeout` (Teardown grace window)
+Do not disable `quarkus.shutdown.delay-enabled`. Without the delay event, Quarkus begins tearing down subsystems before Casual can notify connected domains and drain transactions.
 
-* **What it does:** The maximum deadline/timeout allowed during the actual teardown of resources (HTTP server, CDI beans, IronJacamar JCA pools, JDBC datasources, thread pools).
-* **How it works:**
-  1. Once the delay phase finishes, Quarkus begins closing active HTTP connections, shutting down pools, and terminating threads.
-  2. If all resources finish shutting down in 200 ms, Quarkus exits immediately—it does not wait for the timeout.
-  3. If some thread or connection hangs, Quarkus forcefully aborts once `quarkus.shutdown.timeout` expires.
-* **Nature:** Upper bound / safety cutoff (non-blocking if teardown completes quickly).
+### Choose the wire-settle delay
 
-### Summary of the lifecycle
+Choose a wire-settle delay that covers network latency and peer processing time in your deployed topology. A shorter delay reduces shutdown time but can move late service traffic into the transaction-drain period.
+
+Local chaos testing with a `500 ms` delay drained up to 32 inbound and 31 outbound entries without requiring an additional `200 ms` poll. Treat that result as a starting point and validate it under representative network latency before changing the production default.
+
+### Choose the drain timeout
+
+Set `casual.shutdown.drain-timeout-ms` to the maximum time you want to reserve for remaining Casual XA work after the wire-settle delay. If the deadline expires, shutdown proceeds even when registry entries remain.
+
+Use an indefinite timeout only when an external process supervisor can wait indefinitely. In Kubernetes, use a finite timeout so the application retains time for phase 2 before the pod termination grace period expires.
+
+### Choose the Quarkus shutdown timeout
+
+Set `quarkus.shutdown.timeout` from the longest HTTP request that you want Quarkus to finish after phase 2 starts. This timeout does not replace the Casual drain timeout and does not guarantee that arbitrary extension cleanup finishes within the same period.
+
+## Kubernetes termination budget
+
+Configure `terminationGracePeriodSeconds` to cover the worst-case sequential shutdown time plus a safety margin:
 
 ```text
-[ SIGTERM Received ]
- │
- ├── Phase 1: Pre-Shutdown Delay (`quarkus.shutdown.delay=15s`)
- │   ├── Fires ShutdownDelayInitiatedEvent (Casual domain disconnect & XA drain)
- │   └── Pauses for remaining delay (allows K8s endpoints & Casual peers to reroute)
- │
- ├── Phase 2: Active Teardown (`quarkus.shutdown.timeout=...`)
- │   ├── Closes HTTP listeners, JCA pools, DataSource, thread pools
- │   └── Exits as soon as teardown finishes (usually ~100–300 ms, capped at timeout)
- │
- ▼
-[ JVM Process Exits ]
+wire-settle delay
++ Casual drain timeout
++ one drain poll interval
++ quarkus.shutdown.delay
++ quarkus.shutdown.timeout, when configured
++ framework teardown time
++ safety margin
 ```
 
-Keeping `quarkus.shutdown.timeout` at `5s`–`15s` ensures that if a resource hangs during teardown, it won't stall the container past the Kubernetes hard-kill boundary (`terminationGracePeriodSeconds`).
+For the common case where the registries become empty during wire settlement and no HTTP request remains active, the process uses only the wire-settle delay, the Quarkus delay, and framework teardown time.
+
+Kubernetes sends `SIGKILL` when the pod termination grace period expires. Make the pod budget larger than the application budget so Quarkus can finish its own shutdown sequence.
+
+## Expected failures during shutdown
+
+After a domain begins disconnecting, a small number of service calls can already be in transit. A downstream call can then return `TPENOENT`, which the intermediate service reports upstream as `TPESVCFAIL`. This response is expected during the interval before every peer has processed domain disconnect.
+
+Existing transactions continue to use XA coordination calls. If service execution fails after resource enlistment, the transaction rolls back rather than retrying the invocation through another connection factory in the same transaction.
+
+## Diagnostic logging
+
+Set the following category to `INFO` to log the initial registry counts, configured timing values, successful drain completion, and drain timeouts:
+
+```properties
+quarkus.log.category."se.laz.casual.quarkus.CasualShutdownDelayHandler".level=INFO
+```
+
+If you set `quarkus.log.console.level=ERROR`, the console handler filters these records even when the category level is `INFO`. Set the console handler to `INFO` for the diagnostic run:
+
+```properties
+quarkus.log.console.level=INFO
+```

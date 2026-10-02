@@ -41,7 +41,7 @@ for executable in wrk curl java find; do
     command -v "$executable" >/dev/null || fail "Required executable not found: $executable"
 done
 for app in front-app node-app db-app; do
-    [[ -r "$BASE_DIR/$app/build/$app-1.0.0-runner.jar" ]] || fail "Build $app before running this script."
+    [[ -r "$BASE_DIR/$app/build/quarkus-app/quarkus-run.jar" ]] || fail "Build $app before running this script."
 done
 [[ -r "$LUA_SCRIPT" ]] || fail "Missing load script: $LUA_SCRIPT"
 for app in front node1 node2 db; do
@@ -111,7 +111,7 @@ start_node1() {
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node1" \
-    -Dquarkus.transaction-manager.node-name="chaos-node1" -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node1.log" 2>&1 &
+    -Dquarkus.transaction-manager.node-name="chaos-node1" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node1.log" 2>&1 &
     PID_NODE1=$!
 }
 
@@ -123,7 +123,7 @@ start_node2() {
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node2" \
-    -Dquarkus.transaction-manager.node-name="chaos-node2" -jar "$BASE_DIR/node-app/build/node-app-1.0.0-runner.jar" >> "$LOG_DIR/node2.log" 2>&1 &
+    -Dquarkus.transaction-manager.node-name="chaos-node2" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node2.log" 2>&1 &
     PID_NODE2=$!
 }
 
@@ -134,7 +134,7 @@ start_db() {
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/db" \
-    -Dquarkus.transaction-manager.node-name="chaos-db" -jar "$BASE_DIR/db-app/build/db-app-1.0.0-runner.jar" >> "$LOG_DIR/db.log" 2>&1 &
+    -Dquarkus.transaction-manager.node-name="chaos-db" -jar "$BASE_DIR/db-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/db.log" 2>&1 &
     PID_DB=$!
 }
 
@@ -145,7 +145,7 @@ start_front() {
     CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/front" \
-    -Dquarkus.transaction-manager.node-name="chaos-front" -jar "$BASE_DIR/front-app/build/front-app-1.0.0-runner.jar" >> "$LOG_DIR/front.log" 2>&1 &
+    -Dquarkus.transaction-manager.node-name="chaos-front" -jar "$BASE_DIR/front-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/front.log" 2>&1 &
     PID_FRONT=$!
 }
 
