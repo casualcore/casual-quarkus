@@ -1,28 +1,125 @@
 # Run the chaos soak test
 
-To verify that no in-doubt transaction records remain after repeated node restarts under transactional load, build the example applications and install `java`, `curl`, and `wrk`. Keep the example application ports available for the test.
+The chaos soak test runs transactional HTTP load through the front application while it repeatedly sends `SIGTERM`
+to backend applications. After the load finishes, the test shuts down the complete topology and checks graceful exits,
+transaction stores, and application logs.
 
-From the repository root, run the script:
+## Prerequisites
+
+Before you run the test, install these commands:
+
+- A JDK that matches the project build. The project currently targets Java 25.
+- `bash`
+- `curl`
+- `find`
+- `wrk`
+
+Keep these local ports available:
+
+- HTTP: `8080`, `8081`, `8082`, and `8083`
+- Casual inbound and reverse outbound: `7771`, `7772`, `7785`, and `7786`
+- Casual event servers: `7691` through `7694`
+
+The harness runs the packaged Quarkus fast JARs. From the repository root, build the extension and example
+applications:
+
+```bash
+./gradlew clean build publishToMavenLocal
+cd example
+./gradlew clean build
+cd ..
+```
+
+## Run the test
+
+From the repository root, run:
 
 ```bash
 ./example/scripts/chaos-soak-test.sh 2h 50 60 30 random-node
 ```
 
-The arguments specify duration, concurrent connections, interval between chaos cycles in seconds, shutdown grace period in seconds, and mode. Allow enough duration for at least one chaos event.
+For a short high-churn verification run, use:
 
-To change the pause between process exit and relaunch for individual application restarts, set `RESTART_PAUSE` to a positive integer in seconds. The default is 5 seconds. The rolling restart sequence in `all` mode retains its 4-second pauses. For example, `RESTART_PAUSE=1 ./example/scripts/chaos-soak-test.sh 10m 50 5 20 random-node` uses a 1-second pause and a 20-second shutdown grace period.
+```bash
+RESTART_PAUSE=1 ./example/scripts/chaos-soak-test.sh 10m 50 5 20 random-node
+```
 
-- `random-node` restarts either node application. The database application stays running during the load phase.
-- `all` retains the broader sequence that also restarts the database application and performs rolling node restarts.
+The positional arguments are:
 
-Each run creates a unique directory under `example/logs/`. Its `ObjectStore` directory contains separate stores for `front`, `node1`, `node2`, and `db`. Each application reuses its directory and transaction-manager node name across restarts. The script sets absolute filesystem store paths through the [Quarkus transaction-manager configuration](https://quarkus.io/guides/transaction/). Previous runs and their records are preserved.
+| Position | Default | Description |
+| :--- | :--- | :--- |
+| `duration` | `2h` | Sets the `wrk` load duration, such as `10m`, `1h`, or `2h`. |
+| `concurrency` | `50` | Sets the number of concurrent HTTP connections. |
+| `chaos interval` | `60` | Sets the number of seconds between chaos cycles. |
+| `grace period` | `30` | Sets how many seconds the harness waits after `SIGTERM` before it sends `SIGKILL`. |
+| `mode` | `random-node` | Selects `random-node` or `all`. |
 
-The script requires successful load-generator completion, at least one chaos event, and at least one successful load response. Failed requests during shutdown windows remain diagnostic information; they do not independently fail the test.
+Set `RESTART_PAUSE` to a positive number of seconds to control the delay between a process exit and its relaunch. The
+default is `5`. The rolling restart in `all` mode uses its own four-second pauses.
 
-The script enables INFO logging for `DomainDisconnectHandler` and `CasualShutdownDelayHandler`, including when you set the default log level to ERROR. These categories report the remote domain and channel when disconnect arrives, and separate inbound and outbound transaction-entry counts when shutdown starts or draining times out. Inbound counts are approximate during concurrent updates; the two counts do not represent distinct global transactions. To override either category, set its level in `JAVA_OPTS`.
+Use the modes as follows:
 
-Readiness checks require all application HTTP listeners to respond and a successful transactional response through the front end. They do not establish that each node individually serves traffic. Recovery checks use bounded requests and a 120-second retry window; a request already in progress can finish after that window.
+- `random-node` restarts either node application. The database and front applications remain running during the load.
+- `all` cycles through node restarts, database restarts, and a rolling restart of both nodes.
 
-After orderly shutdown, the script scans each configured store and writes remaining file paths to `in-doubt-files.txt`. Missing or inaccessible stores and scan errors fail verification. Remaining store files, forced shutdowns, and detected Netty leak warnings also fail the run. An empty store scan checks for remaining transaction records; it does not reconcile database contents.
+The reverse topology uses [`casual-config-db-reverse.json`](../config/casual-config-db-reverse.json). The database
+application opens one reverse inbound connection to each node. Each node exposes a reverse outbound listener for the
+database connection. The front-to-node hop uses the standard outbound connections.
 
-If the run fails before orderly shutdown, inspect the preserved application logs and stores. The exit handler stops the processes, but that cleanup does not constitute a successful transaction-store verification.
+## Configure logging
+
+Pass additional JVM system properties through `JAVA_OPTS`. For example, run with ERROR as the default application log
+level while retaining the harness's focused shutdown diagnostics:
+
+```bash
+JAVA_OPTS='-Dquarkus.log.level=ERROR' \
+  ./example/scripts/chaos-soak-test.sh 10m 50 5 20 random-node
+```
+
+The harness sets these categories to INFO:
+
+- `se.laz.casual.network.outbound.DomainDisconnectHandler`
+- `se.laz.casual.network.outbound.NettyNetworkConnection`
+- `se.laz.casual.quarkus.CasualShutdownDelayHandler`
+
+These categories report domain disconnects and transaction draining. If you set `quarkus.log.console.level` to
+`ERROR`, the console handler suppresses their INFO messages. You can override an individual category by specifying its
+level in `JAVA_OPTS`.
+
+To enable Netty paranoid leak detection, run:
+
+```bash
+JAVA_OPTS='-Dio.netty.leakDetection.level=PARANOID' \
+  ./example/scripts/chaos-soak-test.sh 1h 50 60 30 random-node
+```
+
+## Understand the result
+
+Each run creates a unique directory under `example/logs/`. The directory contains:
+
+- Application logs for the front, node, and database applications.
+- `wrk.log` with throughput and latency results.
+- `wrk_errors.log` with non-successful HTTP responses.
+- `ObjectStore/` with separate transaction stores for `front`, `node1`, `node2`, and `db`.
+- `in-doubt-files.txt` with any files that remain in those transaction stores after shutdown.
+
+The script fails when any of these conditions occurs:
+
+- The load generator fails or records no successful request.
+- No chaos event occurs.
+- An application exits unexpectedly or does not recover within the readiness window.
+- A transaction-store file remains after orderly shutdown.
+- An application exceeds the grace period and requires `SIGKILL`.
+- A Netty leak warning appears in an application log.
+
+Non-2xx responses during a shutdown window remain diagnostic results and do not fail the run. A request can already be
+in transit when a node starts disconnecting. A downstream `TPENOENT` can then become `TPESVCFAIL` at the front
+application. See [Graceful shutdown](../../graceful-shutdown.md#expected-failures-during-shutdown) for the expected
+failure sequence.
+
+Readiness checks require all four HTTP listeners to respond and require one successful transactional request through
+the front application. The checks do not prove that each node individually serves traffic. Each recovery check has a
+120-second deadline.
+
+If a run stops before orderly shutdown, inspect its preserved log directory. The exit handler stops remaining
+processes, but that cleanup does not provide a successful transaction-store verification.

@@ -4,7 +4,8 @@
 ## Applications
 
 * `example-app`: An application to test calls to and from Casual or another `example-app` instance, including custom handlers.
-* `db-app`, `node-app`, `front-app`: Applications used for [Soak and chaos testing](soak-testing.md) (see also [Chaos test results](test-results/chaos/README.md)).
+* `db-app`, `node-app`, `front-app`: Applications used for [soak testing](soak-testing.md) and
+  [automated chaos testing](scripts/chaos-soak-test.md).
 
 ## Example app
 
@@ -92,4 +93,5 @@ Calls through `casual-caller` (`/casualcaller` instead of `/casual`) use the per
 
 For instructions on running the load and failure injection harnesses, see [Soak testing](soak-testing.md).
 
-For documented benchmark results across extended runs (including 100% Netty `PARANOID` leak detection), see [Chaos and soak test results](test-results/chaos/README.md).
+For the automated topology launcher, failure injection, and transaction-integrity checks, see
+[Run the chaos soak test](scripts/chaos-soak-test.md).
