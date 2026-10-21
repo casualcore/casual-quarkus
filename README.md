@@ -3,7 +3,8 @@
 
 A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https://github.com/casualcore/casual) middleware via [IronJacamar](https://docs.quarkiverse.io/quarkus-ironjacamar/dev/) (JCA).
 
-Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
+Provides **inbound** and **reverse inbound** connectivity for exposing CDI beans as Casual services, and **outbound**
+and **reverse outbound** connectivity for calling external Casual services.
 
 Currently wraps `Casual JCA 3.5.0-SNAPSHOT` and `Casual Caller 3.3.4-SNAPSHOT`
 
