@@ -19,13 +19,17 @@ import se.laz.casual.api.buffer.CasualBuffer;
 import se.laz.casual.api.buffer.ServiceReturn;
 import se.laz.casual.api.buffer.type.OctetBuffer;
 import se.laz.casual.api.flags.ErrorState;
+import se.laz.casual.connection.caller.CasualResourceException;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import static java.lang.System.Logger.Level.ERROR;
+
 @Path("/casualcallersync")
 public class CounterResource
 {
+    private static final System.Logger LOG = System.getLogger(CounterResource.class.getName());
     private static final int MAX_ATTEMPTS = 3;
     private static final long RETRY_DELAY_MILLIS = 50;
     private final TransactionalCounterCall counterCall;
@@ -79,6 +83,10 @@ public class CounterResource
         }
         catch (CasualRuntimeException e)
         {
+            if (e instanceof CasualResourceException)
+            {
+                LOG.log(ERROR, () -> "Service invocation threw an exception for service=" + serviceName, e);
+            }
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                            .entity(e.getMessage())
                            .build();

@@ -22,14 +22,16 @@
                 "host": "localhost",
                 "port": 7785
             },
-            "size": 2
+            "size": 1,
+            "maxConnectionBackoffMillis": 100
         },
         {
             "address": {
                 "host": "localhost",
                 "port": 7786
             },
-            "size": 2
+            "size": 1,
+            "maxConnectionBackoffMillis": 100
         }],
     "eventServer":{
         "portNumber": 7691,
