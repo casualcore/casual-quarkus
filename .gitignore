@@ -62,3 +62,5 @@ secret.*
 
 *.class
 *.jar
+
+AGENTS.md
