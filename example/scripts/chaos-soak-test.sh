@@ -82,7 +82,20 @@ PID_FRONT=""
 PID_WRK=""
 HARD_KILL_COUNT=0
 
+any_test_process_running() {
+    local pid
+
+    for pid in "$PID_WRK" "$PID_FRONT" "$PID_NODE1" "$PID_NODE2" "$PID_DB"; do
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 cleanup() {
+    any_test_process_running || return 0
+
     echo
     echo "--- Stopping all running processes ---"
     [ -n "$PID_WRK" ] && kill -9 "$PID_WRK" 2>/dev/null || true
