@@ -1,0 +1,19 @@
+{
+    "domain": {
+        "name": "quarkus-casual-domain-one"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "reverseOutbound":[
+        {
+            "name": "quarkusReverse",
+            "port": 7780
+        }],
+    "eventServer":{
+        "portNumber": 7698,
+        "useEpoll": true
+    }
+}

@@ -3,10 +3,9 @@
 
 ## Applications
 
-`example-app` - an application that you can use for testing calls towards another `example-app` or to/from casual.
-You can also use it to test using your own handlers.
-
-`db`, `node`, `front` - applications that are used in [soak testing](soak-testing.md)
+* `example-app`: An application to test calls to and from Casual or another `example-app` instance, including custom handlers.
+* `db-app`, `node-app`, `front-app`: Applications used for [soak testing](soak-testing.md) and
+  [automated chaos testing](scripts/chaos-soak-test.md).
 
 ## Example app
 
@@ -17,12 +16,14 @@ cd example
 CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
 ```
 
-or ( if you build a fat jar and want to test that)
+Alternatively, run the packaged fast JAR:
+
 ```bash
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
+CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
-To run the examples with no casual, you can start two instances of the casual quarkus example-app such as:
+To run the examples without an external Casual instance, start two `example-app` instances as peers:
+
 ```sh
 CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
 ```
@@ -33,38 +34,65 @@ and
 QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
 ```
 
-or when using the fat jar:
+Alternatively, run the packaged fast JARs:
+
 ```sh
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/example-app-1.0.0-runner.jar
+CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
 and
 
 ```sh
-QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/example-app-1.0.0-runner.jar
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
-You can then test, for instance the fielded service, as such:
+Test the fielded service:
 ```sh
-$curl 'localhost:8080/casual/simpleObject?id=42&name=bob'
+curl 'localhost:8080/casual/simpleObject?id=42&name=bob'
 SimpleObject{id=42, name='bob'}
 ```
 
-Or to test the echo service:
+Test the echo service:
 ```sh
-$curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/casual%2fexample%2fjava%2fecho
+curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/echo
 Bazinga!
 ```
 
-To test the sum service, which uses the user applications ```JsonBufferHandler```:
+Test the sum service, which uses the custom `JsonBufferHandler`:
 ```sh
 curl -X POST -d @sum.json -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casual/sum?bufferType=.json/
 ```
 
+The example application running with the `peer` profile exposes port 8000 instead of 8080. When modifying custom buffer handlers or SPI extensions, restart the application before testing with `quarkusDev`, because handlers are discovered at build time.
 
-Note that the example application with the `peer` profile is exposing port 8000 instead of 8080.
-Also note that if you want to run the examples that uses their own buffer handlers etc, you need to restart the application when you have changed the handlers even when running with `quarkusDev`. 
-This since the handlers are found during build time of the user application.
+## Reverse outbound and reverse inbound
 
-There's a third example configuration file `casual-config-reverse-inbound.json` if you want to test reverse inbound.
-Note, it needs a reverse outbound to connect to and currently only casual can provide that.
+Reverse Outbound and Reverse Inbound are symmetric features. You can pair two `example-app` instances: one listens (Reverse Outbound) and the other connects to it (Reverse Inbound). Once connected, the listening instance can call services exposed on the connecting instance as if it had a standard outbound connection towards it.
+
+1. Start the reverse outbound instance listening on port `7780` (`casual-config-reverse-outbound.json`) with its `casual` pool backed by the reverse pool (`revout` profile):
+
+```sh
+QUARKUS_PROFILE=revout CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-reverse-outbound.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
+```
+
+2. Start the reverse inbound instance connecting to `localhost:7780` with two connections (`casual-config-reverse-inbound.json`):
+
+```sh
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-reverse-inbound.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
+```
+
+3. Call a service on the reverse outbound instance to send a request over the connection established by the reverse inbound instance:
+
+```sh
+curl -X POST -d @curl-data -H 'Content-Type: application/casual-x-octet' http://localhost:8080/casualcaller/echo
+Bazinga!
+```
+
+Calls through `casual-caller` use per-instance connection factory entries. With $N$ connected reverse inbound instances, `casual-caller` manages $N$ distinct virtual pools, each with its own service discovery, validity state, and failover priority.
+ 
+## Soak and chaos testing
+
+For instructions on running the load and failure injection harnesses, see [Soak testing](soak-testing.md).
+
+For the automated topology launcher, failure injection, and transaction-integrity checks, see
+[Run the chaos soak test](scripts/chaos-soak-test.md).

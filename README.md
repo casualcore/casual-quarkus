@@ -3,17 +3,18 @@
 
 A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https://github.com/casualcore/casual) middleware via [IronJacamar](https://docs.quarkiverse.io/quarkus-ironjacamar/dev/) (JCA).
 
-Provides both **inbound**, **reverse inbound** (expose CDI beans as Casual services) and **outbound** (call external Casual services) connectivity.
+Provides **inbound** and **reverse inbound** connectivity for exposing CDI beans as Casual services, and **outbound**
+and **reverse outbound** connectivity for calling external Casual services.
 
-Currently wraps up `Casual JCA 3.4.7` and `Casual Caller 3.3.3`
+Currently builds with `Casual JCA 3.7.3` and `Casual Caller 3.4.3`.
 
-## Getting Started
+## Getting started
 
 ### Add the dependency
 
 **Gradle:**
 ```groovy
-implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.1
+implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.2'
 ```
 
 **Maven:**
@@ -21,7 +22,7 @@ implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.1
 <dependency>
     <groupId>se.laz.casual</groupId>
     <artifactId>casual-quarkus</artifactId>
-    <version>1.0.0-beta.1</version>
+    <version>1.0.0-beta.2</version>
 </dependency>
 ```
 
@@ -58,7 +59,7 @@ quarkus.ironjacamar.casual.ra.config.port=7771
 quarkus.ironjacamar.casual.ra.config.inbound-server-port=7772
 quarkus.ironjacamar.casual.ra.config.network-connection-pool-size=1
 quarkus.ironjacamar.casual.ra.config.network-connection-pool-name=casual-pool
-# we do not want calls to block a whole thread
+# Prevent calls from blocking platform carrier threads
 quarkus.virtual-threads.enabled=true
 ```
 
@@ -87,7 +88,7 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
 }
 ```
 
-When using `casual-caller` you can also use a configuration file, pointed to by the `CASUAL_CALLER_CONFIG_FILE` environment variable, in case you want to set transactions as sticky - multiple calls in the same transaction uses the same pool in case the services are available there.
+When using `casual-caller`, you can configure sticky transactions in a configuration file pointed to by the `CASUAL_CALLER_CONFIG_FILE` environment variable. Multiple calls within the same transaction then use the same pool when the requested services are available.
 
 ```json
 {
@@ -112,13 +113,11 @@ public ServiceReturn<CasualBuffer> callService(String serviceName, CasualBuffer 
     }
 }
 ```
-This is a very simple example, please see the example application for a more complete example which is heaviliy async and thus also makes use
-of ```tpacall``` instead of tpcall.
-
+For a complete asynchronous example using `tpacall` and Mutiny `Uni`, see the [example application](example/README.md).
 
 ### Multiple outbound pools
 
-Additional pools can have any name. Only one pool `needs` to be named `casual`:
+Additional pools can have any name. Only one pool needs to be named `casual`:
 
 ```properties
 quarkus.ironjacamar.casual.ra.kind=casual
@@ -131,48 +130,71 @@ quarkus.ironjacamar.other-pool.ra.config.host=host-b
 quarkus.ironjacamar.other-pool.ra.config.port=7771
 ```
 
-## Example Application
+## Reverse outbound
 
-The [`example/`](example/README.md) directory contains standalone Quarkus applications that demonstrates:
+Reverse outbound is the symmetric counterpart to reverse inbound. The EIS connects to a port configured in the Casual
+configuration file. For details about the `reverseOutbound` configuration, see the
+[casual-java reverse outbound documentation](https://github.com/casualcore/casual-java/blob/dev/reverse-outbound.md).
+After the handshake completes, the connection operates as a standard outbound connection. Configure the pool using
+standard IronJacamar configuration where `network-connection-pool-name` matches the configured reverse outbound name:
+
+```properties
+quarkus.ironjacamar.casual.ra.kind=casual
+# host/port are unused for reverse pools but must be set
+quarkus.ironjacamar.casual.ra.config.host=reverse
+quarkus.ironjacamar.casual.ra.config.port=0
+quarkus.ironjacamar.casual.ra.config.network-connection-pool-name=myReverseOutbound
+quarkus.ironjacamar.casual.ra.config.inbound-server-port=7772
+# no prefill - prefill creates unpinned managed connections and casual-caller only ever requests pinned ones
+quarkus.ironjacamar.casual.ra.cm.pool.config.min-size=0
+quarkus.ironjacamar.casual.ra.cm.pool.config.initial-size=0
+```
+
+You don't need to set `network-connection-pool-size` for a reverse pool. This property controls standard outbound
+pools and doesn't control how many reverse connections the pool accepts. The reverse pool holds the connections that
+connecting instances establish. `casual-caller` exposes each connected instance as a separate connection factory
+entry. With `n` connected instances, `casual-caller` sees `n` pools, each with its own service discovery, validity,
+and failover priority.
+
+## Example application
+
+The [`example/`](example/README.md) directory contains standalone Quarkus applications that demonstrate:
 
 - **Inbound services** -- `EchoServiceImpl`, `ReverseServiceImpl`, `FieldedServiceImpl` and `SumServiceImpl` exposed as Casual services via `@CasualService`
 - **Outbound calls** -- a REST endpoint (`POST /casual/{serviceName}`) that uses `CasualConnectionFactory` with non-blocking `tpacall` and Mutiny `Uni<Response>`
 - **A single outbound pool** -- one outbound pool configuration showing named pool setup
 - **Virtual threads** -- enabled for non-blocking service handling
-- **casual config file** -- showing basic usage. See [https://github.com/casualcore/casual-java](casual-java) for documentation
+- **casual config file** -- showing basic usage. See the [casual-java](https://github.com/casualcore/casual-java) documentation for details
 - **example fielded file** -- used in the fielded test service
 - **user defined handlers** -- showing how a user application can implement their own ServiceHandler, BufferHandler and ServiceHandlerExtension
-- **applications used for soak testing**
+- **applications used for soak testing** -- see [Soak testing](example/soak-testing.md) and
+  [Run the chaos soak test](example/scripts/chaos-soak-test.md)
 
-The example app consumes the extension from Maven Local. Build and install the extension first:
+The example application consumes the extension from Maven Local. Before running the example application, build and publish the extension locally:
 
 ```bash
 ./gradlew clean build publishToMavenLocal
 ```
 
-## XA note for quarkus
+## XA note for Quarkus
 
-At REST endpoints and at exposed java services `@CasualService`:
+At REST endpoints and at exposed Java services (`@CasualService`):
 ```java
 @Transactional(Transactional.TxType.REQUIRED)
 ```
-By default, quarkus REST endpoints are non transactional.
+By default, Quarkus REST endpoints are non-transactional.
 
-## Performance Tuning for Quarkus
+## Performance tuning for Quarkus
 
-To achieve the best results with Casual JCA in Quarkus, we recommend the following configuration based on example app soak tests:
+To achieve the best results with Casual JCA in Quarkus, apply the following configuration recommendations based on soak test results:
 
-* Virtual Threads: Enable them! It allows the extension to handle thousands of concurrent requests without the memory overhead of platform threads.
+* **Virtual threads:** Enable them. Virtual threads allow the extension to handle thousands of concurrent requests without the memory overhead of platform threads.
+* **The acquisition bridge:** If you observe "Pinned Thread" warnings, ensure `getConnection()` is called via a platform executor (such as `Infrastructure.getDefaultExecutor()`) to keep IronJacamar pool logic off the virtual thread carrier threads.
+* **Logical vs. physical connections:** You can set a high JCA `max-pool-size` (such as 1000+). Because Casual JCA multiplexes over a few physical Netty connections, these connection handles are lightweight.
 
-* The Acquisition Bridge: If you see "Pinned Thread" warnings, ensure getConnection() is called via a platform executor (like Infrastructure.getDefaultExecutor()) to keep the IronJacamar pool logic away from the Virtual Thread carrier threads.
+## Graceful shutdown
 
-* Logical vs. Physical Connections: Don't be afraid to set a high JCA max-pool-size (e.g., 1000+). Because Casual JCA multiplexes over a few physical Netty connections, these "connections" are just lightweight logical handles.
-
-
-## Gracful shutdown
-
-How graceful shutdown works is documented [here](graceful-shutdown.md)
-
+For details on the shutdown lifecycle, see [Graceful shutdown](graceful-shutdown.md).
 
 ## Architecture
 
@@ -181,13 +203,13 @@ quarkus-casual/             (runtime module)
 quarkus-casual-deployment/  (deployment module)
 ```
 
-### Build-time (deployment module)
+### Build time (deployment module)
 
 `CasualProcessor` uses Jandex to discover `@CasualService` annotations and produces `CasualServiceBuildItem`s. A `@Record(RUNTIME_INIT)` build step converts these into `CasualServiceDescriptor`s and calls `CasualServiceRecorder.registerServices()`, which resolves CDI bean instances and registers them in `CasualQuarkusServiceRegistry`.
 
 It also finds SPI implementations at build time and produces `CasualSPIBuildItem`s. These are then registered at runtime via a build step that converts these into `CasualSPIDescriptor`s
-and calls `CasualSPIRecorder.registerSpiImplementations` that pre registers the SPI implementations into Casual JCA's handler factories.
-The handlers that can be overriden this way by a user application are:
+and calls `CasualSPIRecorder.registerSpiImplementations` that pre-registers the SPI implementations into Casual JCA's handler factories.
+The handlers that can be overridden this way by a user application are:
 * `se.laz.casual.jca.inbound.handler.buffer.BufferHandler`
 * `se.laz.casual.jca.inbound.handler.service.ServiceHandler`
 * `se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtension`

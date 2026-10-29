@@ -12,10 +12,6 @@ import jakarta.resource.spi.ResourceAdapter;
 import jakarta.resource.spi.ResourceAdapterInternalException;
 import jakarta.resource.spi.endpoint.MessageEndpointFactory;
 import se.laz.casual.jca.CasualResourceAdapter;
-import se.laz.casual.jca.CasualResourceManager;
-import se.laz.casual.jca.Predicate;
-import se.laz.casual.jca.RuntimeInformation;
-import se.laz.casual.jca.ShutdownBarrier;
 import se.laz.casual.jca.inflow.CasualInboundTransactionRegistry;
 
 import javax.transaction.xa.XAResource;
@@ -57,6 +53,11 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
         return delegate.getInboundTransactionRegistry().orElseThrow(() -> new IllegalStateException("Inbound transaction registry not initialized"));
     }
 
+    static void prepareEndpointDeactivation()
+    {
+        delegate.prepareEndpointDeactivation();
+    }
+
     @Override
     public void start(BootstrapContext ctx) throws ResourceAdapterInternalException
     {
@@ -94,18 +95,10 @@ public class CasualQuarkusResourceAdapter implements ResourceAdapter
     {
         // we guard so that this is only being executed once - regardless of how many outbound pools
         // that are configured - since we only have one inbound server running regardless of how many outbound pools there are
-        // note: this is a fallback in case the user application has disabled the shutdown barrier
-        // by setting quarkus.shutdown.delay-enabled=false
-        RuntimeInformation.setDomainIsBeingShutdown(true);
         if (INBOUND_ACTIVE.decrementAndGet() == 0)
         {
-            LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint, waiting for in-flight service calls to complete");
-            Predicate predicate = () -> getInboundTransactionRegistry().hasPending() || CasualResourceManager.getInstance().hasPending();
-            long sleepTimeMilliseconds = 20L;
-            ShutdownBarrier shutdownBarrier = ShutdownBarrier.of(sleepTimeMilliseconds, predicate);
-            shutdownBarrier.intermittentSleep();
-            LOG.log(Logger.Level.INFO, () -> "continuing shutdown procedure");
-            delegate.endpointDeactivation(endpointFactory, spec);
+            LOG.log(Logger.Level.INFO, () -> "Deactivating inbound endpoint");
+            delegate.deactivateEndpoint(spec);
         }
     }
 

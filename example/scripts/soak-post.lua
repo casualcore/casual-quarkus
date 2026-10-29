@@ -1,7 +1,14 @@
 -- soak-post.lua — wrk script for casual soak testing
 -- Reads POST body from WRK_BODY_FILE.
--- Logs non-2xx response bodies to WRK_ERROR_FILE (append, thread-safe).
+-- Appends non-2xx response bodies to WRK_ERROR_FILE for diagnostics.
 -- Summary stats come from wrk's built-in aggregation.
+
+local threads = {}
+successful_responses = 0
+
+function setup(thread)
+    table.insert(threads, thread)
+end
 
 local body_file = os.getenv("WRK_BODY_FILE")
 local error_file = os.getenv("WRK_ERROR_FILE")
@@ -27,9 +34,11 @@ function init(args)
 end
 
 function response(status, headers, body)
+    if status >= 200 and status < 300 then
+        successful_responses = successful_responses + 1
+    end
     if (status < 200 or status >= 300) and ef then
-        -- Append-mode writes < PIPE_BUF (4096) are atomic on Linux
-        ef:write(string.format("HTTP %d: %s\n", status, body:sub(1, 500)))
+        ef:write(string.format("HTTP %d: %s\n", status, body:sub(1, 500):gsub("[\r\n]", " ")))
         ef:flush()
     end
 end
@@ -45,6 +54,12 @@ function done(summary, latency, requests)
     local write_err = summary.errors.write or 0
     local timeout_err = summary.errors.timeout or 0
     local sock_err = connect_err + read_err + write_err + timeout_err
+
+    local successful = 0
+    for _, thread in ipairs(threads) do
+        successful = successful + thread:get("successful_responses")
+    end
+    io.stderr:write(string.format("WRK_SUCCESS:%d\n", successful))
 
     -- Machine-readable output for the shell script
     io.stderr:write(string.format("WRK_TOTAL:%d\n", summary.requests))
