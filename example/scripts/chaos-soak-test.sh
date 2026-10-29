@@ -19,10 +19,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LUA_SCRIPT="$SCRIPT_DIR/soak-post.lua"
 DATA_FILE="$BASE_DIR/curl-data"
+FIELD_TABLE_FILE="$BASE_DIR/config/casual-fields.json"
 RUN_ID="chaos-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$BASE_DIR/logs"
 LOG_DIR=$(mktemp -d "$BASE_DIR/logs/$RUN_ID-XXXXXX")
 STORE_ROOT="$LOG_DIR/ObjectStore"
+RESTART_TIMES_FILE="$LOG_DIR/restart-times.csv"
 cd "$BASE_DIR"
 
 fail() {
@@ -44,9 +46,11 @@ for app in front-app node-app db-app; do
     [[ -r "$BASE_DIR/$app/build/quarkus-app/quarkus-run.jar" ]] || fail "Build $app before running this script."
 done
 [[ -r "$LUA_SCRIPT" ]] || fail "Missing load script: $LUA_SCRIPT"
+[[ -r "$FIELD_TABLE_FILE" ]] || fail "Missing field table: $FIELD_TABLE_FILE"
 for app in front node1 node2 db; do
     mkdir -p "$STORE_ROOT/$app"
 done
+printf 'timestamp,application,http_ready_ms,transactional_ready_ms\n' > "$RESTART_TIMES_FILE"
 
 echo "========================================================"
 echo "  CASUAL QUARKUS CHAOS SOAK TEST"
@@ -108,7 +112,7 @@ start_node1() {
     QUARKUS_PROFILE=reverse \
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-one-reverse.json" \
-    CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
+    CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node1" \
     -Dquarkus.transaction-manager.node-name="chaos-node1" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node1.log" 2>&1 &
@@ -120,7 +124,7 @@ start_node2() {
     QUARKUS_PROFILE=reverse,two \
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-two-reverse.json" \
-    CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
+    CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node2" \
     -Dquarkus.transaction-manager.node-name="chaos-node2" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node2.log" 2>&1 &
@@ -131,7 +135,7 @@ start_db() {
     echo "[$(date +%T)] Starting Database App (reverse inbound to 7785 & 7786)..."
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-db-reverse.json" \
-    CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
+    CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/db" \
     -Dquarkus.transaction-manager.node-name="chaos-db" -jar "$BASE_DIR/db-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/db.log" 2>&1 &
@@ -142,7 +146,7 @@ start_front() {
     echo "[$(date +%T)] Starting Front App (HTTP 8080)..."
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-front.json" \
-    CASUAL_FIELD_TABLE="$BASE_DIR/casual-fields.json" \
+    CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
     java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/front" \
     -Dquarkus.transaction-manager.node-name="chaos-front" -jar "$BASE_DIR/front-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/front.log" 2>&1 &
@@ -230,6 +234,55 @@ wait_for_endpoint() {
     fail "Transactional endpoint did not recover within the readiness window; inspect $LOG_DIR."
 }
 
+wait_for_http_listener() {
+    local port=$1
+    local deadline=$((SECONDS + 120))
+    local http_code
+
+    while (( SECONDS < deadline )); do
+        assert_running
+        if http_code=$(curl --silent --connect-timeout 1 --max-time 1 \
+                --output /dev/null --write-out '%{http_code}' "http://localhost:$port/"); then
+            if [[ "$http_code" =~ ^[234][0-9][0-9]$ ]]; then
+                return
+            fi
+        fi
+        sleep 0.1
+    done
+    fail "HTTP listener on port $port did not recover within the readiness window; inspect $LOG_DIR."
+}
+
+monotonic_milliseconds() {
+    local seconds fraction ignored
+
+    IFS=' .' read -r seconds fraction ignored < /proc/uptime
+    fraction="${fraction}000"
+    printf '%d\n' "$((10#$seconds * 1000 + 10#${fraction:0:3}))"
+}
+
+restart_and_wait() {
+    local application_name=$1
+    local start_function=$2
+    local http_port=$3
+    local started_at_ms http_ready_at_ms completed_at_ms http_ready_ms transactional_ready_ms
+
+    started_at_ms=$(monotonic_milliseconds)
+    "$start_function"
+    wait_for_http_listener "$http_port"
+    http_ready_at_ms=$(monotonic_milliseconds)
+    wait_for_endpoint
+    completed_at_ms=$(monotonic_milliseconds)
+    http_ready_ms=$((http_ready_at_ms - started_at_ms))
+    transactional_ready_ms=$((completed_at_ms - started_at_ms))
+
+    printf '[%s] [CHAOS] %s HTTP listener became ready in %d.%03d seconds; transactional readiness passed in %d.%03d seconds.\n' \
+        "$(date +%T)" "$application_name" \
+        "$((http_ready_ms / 1000))" "$((http_ready_ms % 1000))" \
+        "$((transactional_ready_ms / 1000))" "$((transactional_ready_ms % 1000))"
+    printf '%s,%s,%d,%d\n' "$(date --iso-8601=seconds)" "$application_name" \
+        "$http_ready_ms" "$transactional_ready_ms" >> "$RESTART_TIMES_FILE"
+}
+
 wait_for_endpoint
 
 # 2. Launch wrk load generator
@@ -266,12 +319,12 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
             echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 1 ==="
             kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
             sleep "$RESTART_PAUSE"
-            start_node1
+            restart_and_wait "Node 1" start_node1 8081
         else
             echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 2 ==="
             kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
             sleep "$RESTART_PAUSE"
-            start_node2
+            restart_and_wait "Node 2" start_node2 8082
         fi
     else
         ACTION=$((STEP % 4))
@@ -280,33 +333,31 @@ while kill -0 "$PID_WRK" 2>/dev/null; do
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 1 ==="
                 kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
                 sleep "$RESTART_PAUSE"
-                start_node1
+                restart_and_wait "Node 1" start_node1 8081
                 ;;
             2)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Node 2 ==="
                 kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
                 sleep "$RESTART_PAUSE"
-                start_node2
+                restart_and_wait "Node 2" start_node2 8082
                 ;;
             3)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Terminate & Restart Database App ==="
                 kill_app "Database App" "$PID_DB" "$GRACE_PERIOD"
                 sleep "$RESTART_PAUSE"
-                start_db
+                restart_and_wait "Database App" start_db 8083
                 ;;
             0)
                 echo "[$(date +%T)] === Chaos Event #$STEP: Rolling restart of both Nodes ==="
                 kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
                 sleep 4
-                start_node1
-                wait_for_endpoint
+                restart_and_wait "Node 1" start_node1 8081
                 kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
                 sleep 4
-                start_node2
+                restart_and_wait "Node 2" start_node2 8082
                 ;;
         esac
     fi
-    wait_for_endpoint
 done
 
 # Wait for wrk to fully wrap up

@@ -100,6 +100,8 @@ Each run creates a unique directory under `example/logs/`. The directory contain
 - Application logs for the front, node, and database applications.
 - `wrk.log` with throughput and latency results.
 - `wrk_errors.log` with non-successful HTTP responses.
+- `restart-times.csv` with the HTTP listener and end-to-end transactional readiness durations for each restarted
+  application.
 - `ObjectStore/` with separate transaction stores for `front`, `node1`, `node2`, and `db`.
 - `in-doubt-files.txt` with any files that remain in those transaction stores after shutdown.
 
@@ -119,7 +121,11 @@ failure sequence.
 
 Readiness checks require all four HTTP listeners to respond and require one successful transactional request through
 the front application. The checks do not prove that each node individually serves traffic. Each recovery check has a
-120-second deadline.
+120-second deadline. For each restarted application, the harness polls its HTTP listener every 100 milliseconds and
+records when that listener responds. It then records when the complete transactional readiness check passes. Both
+durations start when the harness launches the process after the configured restart pause. They exclude the preceding
+shutdown and restart pause. The harness measures these durations with the system monotonic clock, so wall-clock
+adjustments do not affect the results.
 
 If a run stops before orderly shutdown, inspect its preserved log directory. The exit handler stops remaining
 processes, but that cleanup does not provide a successful transaction-store verification.

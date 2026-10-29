@@ -134,7 +134,7 @@ class CasualProcessor
                 "se.laz.casual.connection.caller.Lookup"));
         additionalBeans.produce(AdditionalBeanBuildItem.unremovableOf(
                 "se.laz.casual.connection.caller.FailoverAlgorithm"));
-        // needed for fat jar applications
+        // Needed when running packaged applications.
         additionalBeans.produce(AdditionalBeanBuildItem.builder()
                                                        .addBeanClass("se.laz.casual.quarkus.CustomConnectionFactoryFinder")
                                                        .setUnremovable()
