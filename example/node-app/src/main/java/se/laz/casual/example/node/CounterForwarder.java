@@ -44,7 +44,9 @@ public class CounterForwarder
         if (result.getErrorState() == ErrorState.TPENOENT)
         {
             setRollbackOnly();
-            // counter exists; an unavailable downstream service makes this invocation fail.
+            // can happen when a node app is being taken down during the chaos tests
+            // front app finds node service, node app is going down - will return TPENOENT
+            // without hitting the db app that is still running in this case
             return InboundResponse.createBuilder()
                     .errorState(ErrorState.TPESVCFAIL)
                     .transactionState(TransactionState.ROLLBACK_ONLY)
