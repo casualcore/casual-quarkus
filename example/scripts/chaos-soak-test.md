@@ -64,7 +64,7 @@ Use the modes as follows:
 
 The reverse topology uses [`casual-config-db-reverse.json`](../config/casual-config-db-reverse.json). The database
 application opens one reverse inbound connection to each node. Each node exposes a reverse outbound listener for the
-database connection. The front-to-node hop uses the standard outbound connections.
+database connection. The front-to-node uses standard outbound connections.
 
 ## Configure logging
 
