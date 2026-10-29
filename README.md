@@ -14,7 +14,7 @@ Currently builds with `Casual JCA 3.7.3` and `Casual Caller 3.4.3`.
 
 **Gradle:**
 ```groovy
-implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.2-SNAPSHOT'
+implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.2'
 ```
 
 **Maven:**
@@ -22,7 +22,7 @@ implementation 'se.laz.casual:casual-quarkus:1.0.0-beta.2-SNAPSHOT'
 <dependency>
     <groupId>se.laz.casual</groupId>
     <artifactId>casual-quarkus</artifactId>
-    <version>1.0.0-beta.2-SNAPSHOT</version>
+    <version>1.0.0-beta.2</version>
 </dependency>
 ```
 
