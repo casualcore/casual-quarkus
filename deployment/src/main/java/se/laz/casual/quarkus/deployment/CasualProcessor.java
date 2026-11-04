@@ -61,6 +61,8 @@ class CasualProcessor
 {
     private static final String FEATURE = "casual";
     private static final String GROUP_NAME = "se.laz.casual";
+    private static final String PASS_THROUGH_BUFFER_HANDLER =
+            "se.laz.casual.jca.inbound.handler.buffer.PassThroughBufferHandler";
     private static final DotName CASUAL_SERVICE = DotName.createSimple("se.laz.casual.api.service.CasualService");
     private static final DotName TRANSACTION_ANNOTATION = DotName.createSimple("jakarta.transaction.Transactional");
     private static final System.Logger LOG = System.getLogger(CasualProcessor.class.getName());
@@ -164,6 +166,11 @@ class CasualProcessor
             for (ClassInfo implementation : index.getAllKnownImplementations(interfaceName))
             {
                 String implClassName = implementation.name().toString();
+                if (PASS_THROUGH_BUFFER_HANDLER.equals(implClassName))
+                {
+                    // BufferHandlerFactory uses this handler only when no registered handler accepts the buffer.
+                    continue;
+                }
                 serviceProviders.produce(new ServiceProviderBuildItem(
                         interfaceClassName,
                         implClassName
