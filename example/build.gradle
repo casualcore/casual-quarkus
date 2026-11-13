@@ -23,3 +23,11 @@ allprojects {
         suppressedValidationErrors.add('enforced-platform')
     }
 }
+
+subprojects {
+    plugins.withId('io.quarkus') {
+        tasks.named('quarkusDev') {
+            jvmArguments.add('--enable-native-access=ALL-UNNAMED')
+        }
+    }
+}

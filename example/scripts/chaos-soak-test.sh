@@ -114,6 +114,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 JAVA_OPTS="${JAVA_OPTS:-}"
+NATIVE_ACCESS_OPTION='--enable-native-access=ALL-UNNAMED'
 SHUTDOWN_LOG_OPTS=(
     '-Dquarkus.log.category."se.laz.casual.network.outbound.DomainDisconnectHandler".level=INFO'
     '-Dquarkus.log.category."se.laz.casual.network.outbound.NettyNetworkConnection".level=INFO'
@@ -126,7 +127,7 @@ start_node1() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-one-reverse.json" \
     CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
-    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    java "$NATIVE_ACCESS_OPTION" "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node1" \
     -Dquarkus.transaction-manager.node-name="chaos-node1" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node1.log" 2>&1 &
     PID_NODE1=$!
@@ -138,7 +139,7 @@ start_node2() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-node-two-reverse.json" \
     CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
-    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    java "$NATIVE_ACCESS_OPTION" "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/node2" \
     -Dquarkus.transaction-manager.node-name="chaos-node2" -jar "$BASE_DIR/node-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/node2.log" 2>&1 &
     PID_NODE2=$!
@@ -149,7 +150,7 @@ start_db() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-db-reverse.json" \
     CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
-    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    java "$NATIVE_ACCESS_OPTION" "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/db" \
     -Dquarkus.transaction-manager.node-name="chaos-db" -jar "$BASE_DIR/db-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/db.log" 2>&1 &
     PID_DB=$!
@@ -160,7 +161,7 @@ start_front() {
     CASUAL_CALLER_CONFIG_FILE="$BASE_DIR/config/caller-config.json" \
     CASUAL_CONFIG_FILE="$BASE_DIR/config/casual-config-front.json" \
     CASUAL_FIELD_TABLE="$FIELD_TABLE_FILE" \
-    java "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
+    java "$NATIVE_ACCESS_OPTION" "${SHUTDOWN_LOG_OPTS[@]}" $JAVA_OPTS -Dquarkus.transaction-manager.object-store.type=file-system \
     -Dquarkus.transaction-manager.object-store.directory="$STORE_ROOT/front" \
     -Dquarkus.transaction-manager.node-name="chaos-front" -jar "$BASE_DIR/front-app/build/quarkus-app/quarkus-run.jar" >> "$LOG_DIR/front.log" 2>&1 &
     PID_FRONT=$!

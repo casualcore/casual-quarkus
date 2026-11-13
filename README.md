@@ -6,7 +6,7 @@ A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https:/
 Provides **inbound** and **reverse inbound** connectivity for exposing CDI beans as Casual services, and **outbound**
 and **reverse outbound** connectivity for calling external Casual services.
 
-Currently builds with `Casual JCA 3.7.3` and `Casual Caller 3.4.3`.
+Currently builds with `Casual JCA 3.7.4` and `Casual Caller 3.4.4`.
 
 ## Getting started
 
@@ -87,6 +87,24 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
     }
 }
 ```
+
+### Enable native access for epoll
+
+On Linux, enable epoll to use Netty's native transport. When you run a classpath-based application on JDK 24 or later,
+grant native access to classpath libraries:
+
+```bash
+java --enable-native-access=ALL-UNNAMED -jar build/quarkus-app/quarkus-run.jar
+```
+
+For a container or deployment launcher, set the same option in the Java command or through `JAVA_TOOL_OPTIONS`:
+
+```bash
+JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED
+```
+
+The JVM grants native access per module. Quarkus fast JAR dependencies run in the unnamed module, so the JVM does not
+support granting access only to the Netty JAR.
 
 When using `casual-caller`, you can configure sticky transactions in a configuration file pointed to by the `CASUAL_CALLER_CONFIG_FILE` environment variable. Multiple calls within the same transaction then use the same pool when the requested services are available.
 

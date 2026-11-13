@@ -19,7 +19,7 @@ CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/co
 Alternatively, run the packaged fast JAR:
 
 ```bash
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
+CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
 To run the examples without an external Casual instance, start two `example-app` instances as peers:
@@ -37,13 +37,13 @@ QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.j
 Alternatively, run the packaged fast JARs:
 
 ```sh
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
+CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
 and
 
 ```sh
-QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/quarkus-app/quarkus-run.jar
+QUARKUS_PROFILE=peer CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-domain-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
 Test the fielded service:
@@ -89,6 +89,9 @@ Bazinga!
 ```
 
 Calls through `casual-caller` use per-instance connection factory entries. With $N$ connected reverse inbound instances, `casual-caller` manages $N$ distinct virtual pools, each with its own service discovery, validity state, and failover priority.
+
+The example Gradle build adds `--enable-native-access=ALL-UNNAMED` to every `quarkusDev` application JVM. This option
+allows Netty to load its native epoll transport without restricted-native-access warnings on JDK 24 or later.
  
 ## Soak and chaos testing
 

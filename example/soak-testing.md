@@ -22,7 +22,7 @@ find ObjectStore -type f 2>/dev/null
 
 Run as:
 ```sh
-CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-db.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5020 -jar db-app/build/quarkus-app/quarkus-run.jar &> logs/db.log
+CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-db.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5020 -jar db-app/build/quarkus-app/quarkus-run.jar &> logs/db.log
 ```
 
 ### Node application (node-app)
@@ -31,11 +31,11 @@ Connects to the database application.
 
 Run two instances:
 ```sh
-CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-one.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node1.log
+CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-one.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node1.log
 ```
 
 ```sh
-QUARKUS_PROFILE=two CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node2.log
+QUARKUS_PROFILE=two CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-two.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node2.log
 ```
 
 ### Front application (front-app)
@@ -44,7 +44,7 @@ Connects to the node applications.
 
 Run as:
 ```sh
-CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-front.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010 -jar front-app/build/quarkus-app/quarkus-run.jar &> logs/front.log
+CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-front.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010 -jar front-app/build/quarkus-app/quarkus-run.jar &> logs/front.log
 ```
 
 ## Running the soak test
@@ -73,16 +73,16 @@ application. The front-to-node hop remains unchanged.
 
 Run the database application:
 ```sh
-CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-db-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -jar db-app/build/quarkus-app/quarkus-run.jar &> logs/db.log
+CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-db-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -jar db-app/build/quarkus-app/quarkus-run.jar &> logs/db.log
 ```
 
 Run the node applications with the `reverse` profile:
 ```sh
-QUARKUS_PROFILE=reverse CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-one-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node1.log
+QUARKUS_PROFILE=reverse CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-one-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node1.log
 ```
 
 ```sh
-QUARKUS_PROFILE=reverse,two CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-two-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node2.log
+QUARKUS_PROFILE=reverse,two CASUAL_CALLER_CONFIG_FILE=$(pwd)/config/caller-config.json CASUAL_CONFIG_FILE=$(pwd)/config/casual-config-node-two-reverse.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -jar node-app/build/quarkus-app/quarkus-run.jar &> logs/node2.log
 ```
 
 Run the front application as before, then start the soak test script.

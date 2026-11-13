@@ -30,6 +30,9 @@ cd example
 cd ..
 ```
 
+The harness starts every application with `--enable-native-access=ALL-UNNAMED` because the example configuration uses
+Netty's native epoll transport.
+
 ## Run the test
 
 From the repository root, run:
