@@ -15,6 +15,10 @@ mkdir -p logs
 
 Uses an in-memory database.
 
+The required standard outbound pool connects to the application's own standard inbound listener on port `7773`.
+This loopback keeps the connection definition independent of a node application. In the reverse topology, application
+traffic reaches `db_counter` through the reverse inbound connections instead of through this loopback connection.
+
 To verify whether there are any in-doubt transactions:
 ```sh
 find ObjectStore -type f 2>/dev/null

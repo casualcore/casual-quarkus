@@ -11,7 +11,13 @@ dependencies {
     implementation "io.quarkus:quarkus-scheduler-deployment:${quarkusVersion}"
     implementation project(':casual-quarkus')
 
+    testImplementation "io.quarkus:quarkus-junit-internal:${quarkusVersion}"
+
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusVersion}"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 // See runtime/build.gradle for explanation

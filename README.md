@@ -88,6 +88,27 @@ You also need a `casual-config.json` pointed to by the `CASUAL_CONFIG_FILE` envi
 }
 ```
 
+### Use loopback when standard connectivity is unused
+
+Casual Quarkus currently requires at least one standard JCA connection definition and starts a standard inbound
+listener. If your application receives its service calls through reverse inbound and does not make standard outbound
+calls, point the required outbound endpoint at the application's own inbound listener:
+
+```properties
+quarkus.ironjacamar.casual.ra.config.host=localhost
+quarkus.ironjacamar.casual.ra.config.port=7773
+quarkus.ironjacamar.casual.ra.config.inbound-server-port=7773
+quarkus.ironjacamar.casual.ra.config.network-connection-pool-size=1
+quarkus.ironjacamar.casual.ra.config.network-connection-pool-name=casual-pool
+```
+
+This loopback configuration keeps the required connection definition independent of another application. Reverse
+inbound traffic continues to use the connections declared in `reverseInbound`; it does not use the loopback
+connection. If the standard JCA pool does not need an eager connection, set its `min-size` and `initial-size` to `0`.
+
+The example [`db-app`](example/db-app/src/main/resources/application.properties) uses this pattern because its reverse
+topology receives `db_counter` calls through reverse inbound connections from the node applications.
+
 ### Enable native access for epoll
 
 On Linux, enable epoll to use Netty's native transport. When you run a classpath-based application on JDK 24 or later,

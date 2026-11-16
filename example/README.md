@@ -65,6 +65,54 @@ curl -X POST -d @sum.json -H 'Content-Type: application/casual-x-octet' http://l
 
 The example application running with the `peer` profile exposes port 8000 instead of 8080. When modifying custom buffer handlers or SPI extensions, restart the application before testing with `quarkusDev`, because handlers are discovered at build time.
 
+## Propagate per-call metadata
+
+Casual Quarkus activates the CDI request context while it invokes an inbound Casual service. You can therefore use a
+`@RequestScoped` bean to make metadata available throughout one service call.
+
+The [`user-handlers`](user-handlers) project demonstrates this pattern:
+
+* [`ExampleServiceHandlerExtension`](user-handlers/src/main/java/se/laz/casual/example/user/handlers/ExampleServiceHandlerExtension.java)
+  reads a `breadcrumb` UUID from the service-call headers. Headers require Casual protocol version 1.5 or later.
+* [`CallMetadata`](user-handlers/src/main/java/se/laz/casual/example/user/handlers/CallMetadata.java) stores the
+  breadcrumb for the current call.
+* [`CallMetadataService`](example-app/src/main/java/se/laz/casual/example/CallMetadataService.java)
+  injects `CallMetadata` and reads the breadcrumb without depending on the inbound request buffer.
+
+The extension initializes `CallMetadata` in `ServiceHandlerExtension.before()`. Casual Quarkus keeps the request
+context active through the service invocation and `ServiceHandlerExtension.after()`, then destroys the request-scoped
+instance. Use the same pattern for correlation identifiers, tenant information, authentication context, locale, or
+other call-scoped data.
+
+See [`CallMetadataPropagationTest`](user-handlers/src/test/java/se/laz/casual/example/user/handlers/CallMetadataPropagationTest.java)
+for the header extraction example. [`CallMetadataEndToEndTest`](example-app/src/test/java/se/laz/casual/example/CallMetadataEndToEndTest.java)
+passes the header through a real protocol 1.5 service call and verifies the value returned by the inbound service.
+
+From the `example` directory, run the end-to-end test with the following command:
+
+```sh
+./gradlew :example-app:test --tests se.laz.casual.example.CallMetadataEndToEndTest
+```
+
+### Understand the CDI lifecycle
+
+`ExampleServiceHandlerExtension` is an application-scoped CDI bean. When CDI creates it, CDI calls the injected
+`setCallMetadata()` method once. The injected value is a proxy for the request-scoped `CallMetadata` bean, not the
+metadata instance for a specific service call. Quarkus can create the application-scoped bean lazily, but CDI always
+completes injection before invoking any method on the bean.
+
+For each inbound service call, Casual Quarkus performs the following steps:
+
+1. `CasualQuarkusServiceHandler` activates a CDI request context.
+2. `ExampleServiceHandlerExtension.before()` reads the breadcrumb header and calls `CallMetadata.setBreadcrumb()`.
+   The proxy resolves to the `CallMetadata` instance associated with the active request context.
+3. `CallMetadataService` reads through its injected `CallMetadata` proxy, which resolves to the same instance.
+4. `ExampleServiceHandlerExtension.after()` runs while the request context remains active.
+5. `CasualQuarkusServiceHandler` terminates the request context and CDI destroys that call's `CallMetadata` instance.
+
+The next inbound call reuses the application-scoped extension and its proxy. Because the call has a new request
+context, the proxy resolves to a new `CallMetadata` instance.
+
 ## Reverse outbound and reverse inbound
 
 Reverse Outbound and Reverse Inbound are symmetric features. You can pair two `example-app` instances: one listens (Reverse Outbound) and the other connects to it (Reverse Inbound). Once connected, the listening instance can call services exposed on the connecting instance as if it had a standard outbound connection towards it.
