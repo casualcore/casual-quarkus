@@ -9,20 +9,29 @@
 
 ## Example app
 
-Build and run the example:
+### Run one application in loopback mode
+
+To run the examples without an external Casual instance, use the `loopback` profile. This profile connects the normal
+outbound pool to the same application's inbound listener on port `7772`:
 
 ```bash
 cd example
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
+QUARKUS_PROFILE=loopback CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
 ```
 
 Alternatively, run the packaged fast JAR:
 
 ```bash
-CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
+QUARKUS_PROFILE=loopback CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
-To run the examples without an external Casual instance, start two `example-app` instances as peers:
+Requests issued through the application's outbound connection return through its inbound listener and invoke the CDI
+Casual services in the same process. This mode is useful for testing services, custom handlers, transactions, and
+`quarkusDev` hot reload with one application.
+
+### Run two applications as peer domains
+
+To test communication across two Casual domains, start two `example-app` instances as peers:
 
 ```sh
 CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
