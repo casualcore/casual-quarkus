@@ -19,9 +19,10 @@ cd example
 QUARKUS_PROFILE=loopback CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json ./gradlew :example-app:quarkusDev
 ```
 
-Alternatively, run the packaged fast JAR:
+Alternatively, from the `example` directory, build the fast JAR from the current sources and run it:
 
 ```bash
+./gradlew :example-app:quarkusBuild
 QUARKUS_PROFILE=loopback CASUAL_CONFIG_FILE=$(pwd)/config/casual-config.json CASUAL_FIELD_TABLE=$(pwd)/config/casual-fields.json java --enable-native-access=ALL-UNNAMED -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar example-app/build/quarkus-app/quarkus-run.jar
 ```
 
@@ -73,6 +74,24 @@ curl -X POST -d @sum.json -H 'Content-Type: application/casual-x-octet' http://l
 ```
 
 The example application running with the `peer` profile exposes port 8000 instead of 8080. When modifying custom buffer handlers or SPI extensions, restart the application before testing with `quarkusDev`, because handlers are discovered at build time.
+
+### Intercept an inbound service call
+
+The [`callMetadata` service method](example-app/src/main/java/se/laz/casual/example/CallMetadataService.java)
+uses [`@ShouldLog`](example-app/src/main/java/se/laz/casual/example/ShouldLog.java), a CDI interceptor binding.
+The [`ServiceLoggingInterceptor`](example-app/src/main/java/se/laz/casual/example/ServiceLoggingInterceptor.java)
+declares the same binding and uses `@Priority` to enable the interceptor. Its `@AroundInvoke` method logs the method
+name and calls `context.proceed()` to continue the invocation.
+
+Start the example in [loopback mode](#run-one-application-in-loopback-mode), then run:
+
+```sh
+curl -fsS -H 'breadcrumb: 68c3d69f-5e44-4131-bf7b-345a882736ca' http://localhost:8080/casualcallersync/call-metadata
+```
+
+The HTTP response contains the same UUID. In the receiving application's log, look for
+`Invoking service method callMetadata` at `INFO` level. The binding is on the inbound service method, so with two
+peer applications you see this entry on the peer that handles the Casual call.
 
 ## Propagate per-call metadata
 

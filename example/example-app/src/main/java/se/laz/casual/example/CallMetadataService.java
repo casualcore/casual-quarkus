@@ -36,6 +36,7 @@ public class CallMetadataService
      * @return a response containing the breadcrumb, or an empty string when no breadcrumb is available
      */
     @CasualService(name = "callMetadata", category = "example")
+    @ShouldLog
     public InboundResponse callMetadata(InboundRequest request)
     {
         String breadcrumb = callMetadata.getBreadcrumb()
