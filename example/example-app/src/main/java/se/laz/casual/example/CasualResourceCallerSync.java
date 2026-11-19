@@ -9,6 +9,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -18,6 +20,7 @@ import org.apache.commons.io.IOUtils;
 import se.laz.casual.api.CasualRuntimeException;
 import se.laz.casual.api.buffer.CasualBuffer;
 import se.laz.casual.api.buffer.CasualBufferType;
+import se.laz.casual.api.buffer.CasualHeaders;
 import se.laz.casual.api.buffer.ServiceReturn;
 import se.laz.casual.api.buffer.type.CStringBuffer;
 import se.laz.casual.api.buffer.type.JsonBuffer;
@@ -27,11 +30,13 @@ import se.laz.casual.api.flags.AtmiFlags;
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.Flag;
 import se.laz.casual.connection.caller.CasualCaller;
+import se.laz.casual.example.user.handlers.CallMetadata;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 @Path("/casualcallersync")
 public class CasualResourceCallerSync
@@ -73,6 +78,26 @@ public class CasualResourceCallerSync
             throw new CasualRuntimeException("Error: " + result.getErrorState());
         }
         return Response.ok().entity(result.getReplyBuffer().getBytes().get(0)).build();
+    }
+
+    @GET
+    @Path("call-metadata")
+    @Transactional(Transactional.TxType.REQUIRED)
+    public Response callMetadata(@HeaderParam("breadcrumb") String breadcrumbValue)
+    {
+        UUID breadcrumb = UUID.fromString(breadcrumbValue);
+        CasualHeaders headers = CasualHeaders.newBuilder()
+                                             .add(CallMetadata.BREADCRUMB_HEADER, breadcrumb.toString())
+                                             .build();
+        CasualBuffer request = CStringBuffer.of("", headers);
+        ServiceReturn<CasualBuffer> result = casualCaller.tpcall("callMetadata", request,
+                Flag.of(AtmiFlags.NOFLAG));
+        if (result.getErrorState() != ErrorState.OK)
+        {
+            throw new CasualRuntimeException("Error: " + result.getErrorState());
+        }
+        CStringBuffer response = CStringBuffer.of(result.getReplyBuffer().getBytes());
+        return Response.ok(response.toString()).build();
     }
 
     private CasualBuffer createBuffer(byte[] data, CasualBufferType bufferType)

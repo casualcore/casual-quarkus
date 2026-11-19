@@ -5,6 +5,7 @@
  */
 package se.laz.casual.example.user.handlers;
 
+import jakarta.inject.Inject;
 import se.laz.casual.api.service.CasualService;
 import se.laz.casual.jca.inbound.handler.InboundRequest;
 import se.laz.casual.jca.inbound.handler.InboundResponse;
@@ -14,17 +15,47 @@ import se.laz.casual.jca.inbound.handler.service.extension.ServiceHandlerExtensi
 import se.laz.casual.spi.Priority;
 
 import java.lang.System.Logger;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.WARNING;
 
 public class ExampleServiceHandlerExtension implements ServiceHandlerExtension
 {
     private static final Logger LOG = System.getLogger(ExampleServiceHandlerExtension.class.getName());
+    private CallMetadata callMetadata;
+
+    @Inject
+    void setCallMetadata(CallMetadata callMetadata)
+    {
+        this.callMetadata = Objects.requireNonNull(callMetadata, "callMetadata can not be null");
+    }
+
     @Override
     public ServiceHandlerExtensionContext before(InboundRequest request, BufferHandler bufferHandler)
     {
         LOG.log(INFO, () -> "ExampleServiceHandlerExtension::before " + request + " " + bufferHandler);
+        populateCallMetadata(request);
         return new ExampleServiceHandlerExtensionContext();
+    }
+
+    private void populateCallMetadata(InboundRequest request)
+    {
+        List<String> breadcrumbs = request.getBuffer().getHeaders().get(CallMetadata.BREADCRUMB_HEADER);
+        if (breadcrumbs.isEmpty())
+        {
+            return;
+        }
+        try
+        {
+            callMetadata.setBreadcrumb(UUID.fromString(breadcrumbs.getFirst()));
+        }
+        catch (IllegalArgumentException e)
+        {
+            LOG.log(WARNING, "Ignoring invalid breadcrumb header", e);
+        }
     }
 
     @Override

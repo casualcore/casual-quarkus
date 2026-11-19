@@ -54,6 +54,8 @@ gradle.properties
 # H2 in example subproject
 ObjectStore/
 
+example/logs/
+
 *.log
 dump*
 secret.*
@@ -61,3 +63,4 @@ secret.*
 *.class
 *.jar
 
+AGENTS.md

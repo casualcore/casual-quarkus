@@ -1,0 +1,28 @@
+{
+    "domain": {
+        "name": "quarkus-casual-node-two"
+    },
+    "unmanaged": true,
+    "outbound":{
+        "unmanaged": true,
+        "useEpoll": true
+    },
+    "inbound": {
+        "useEpoll": true,
+        "startup": {
+            "mode": "discover",
+            "services": [
+                "counter"
+            ]
+        }
+    },
+    "reverseOutbound":[
+        {
+            "name": "db",
+            "port": 7786
+        }],
+    "eventServer":{
+        "portNumber": 7693,
+        "useEpoll": true
+    }
+}

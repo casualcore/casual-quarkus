@@ -6,6 +6,7 @@
 package se.laz.casual.quarkus;
 
 import io.quarkus.arc.Arc;
+import io.quarkus.arc.ManagedContext;
 import se.laz.casual.api.flags.ErrorState;
 import se.laz.casual.api.flags.TransactionState;
 import se.laz.casual.api.service.CasualService;
@@ -68,6 +69,20 @@ public class CasualQuarkusServiceHandler implements ServiceHandler
 
     @Override
     public InboundResponse invokeService(InboundRequest request)
+    {
+        ManagedContext requestContext = Arc.container().requestContext();
+        requestContext.activate();
+        try
+        {
+            return invokeServiceWithActiveRequestContext(request);
+        }
+        finally
+        {
+            requestContext.terminate();
+        }
+    }
+
+    private InboundResponse invokeServiceWithActiveRequestContext(InboundRequest request)
     {
         var contextClassLoader = Thread.currentThread().getContextClassLoader();
         try

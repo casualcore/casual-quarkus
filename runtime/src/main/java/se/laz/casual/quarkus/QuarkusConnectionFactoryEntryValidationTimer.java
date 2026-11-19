@@ -40,7 +40,7 @@ public class QuarkusConnectionFactoryEntryValidationTimer
         }
         catch (Exception e)
         {
-            LOG.log(System.Logger.Level.WARNING, () -> "failed validating connection factories: " + e);
+            LOG.log(System.Logger.Level.WARNING, "Failed validating connection factories.", e);
         }
     }
 }
