@@ -11,7 +11,9 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
+
 import static org.junit.jupiter.api.Assertions.*;
+
 
 class CounterResourceTest
 {

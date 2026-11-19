@@ -6,7 +6,7 @@ A [Quarkus](https://quarkus.io/) extension for integrating with [Casual](https:/
 Provides **inbound** and **reverse inbound** connectivity for exposing CDI beans as Casual services, and **outbound**
 and **reverse outbound** connectivity for calling external Casual services.
 
-Currently builds with `Casual JCA 3.7.4` and `Casual Caller 3.4.4`.
+Currently builds with `Casual JCA 3.8.0` and `Casual Caller 3.5.0`.
 
 ## Getting started
 

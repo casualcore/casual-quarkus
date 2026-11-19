@@ -61,7 +61,7 @@ echo "Log Directory:  $LOG_DIR"
 echo "Duration:       $DURATION"
 echo "Concurrency:    $CONCURRENCY"
 echo "Chaos Interval: ${CHAOS_INTERVAL}s"
-echo "Grace Period:   ${GRACE_PERIOD}s (k8s default)"
+echo "Grace Period:   ${GRACE_PERIOD}s"
 echo "Chaos Mode:     $CHAOS_MODE"
 echo "Restart pause:  ${RESTART_PAUSE}s"
 echo "Object stores:  $STORE_ROOT"
@@ -203,9 +203,7 @@ echo
 echo "--- Starting Reverse Outbound Topology ---"
 start_node1
 start_node2
-sleep 2
 start_db
-sleep 2
 start_front
 
 assert_running() {
@@ -385,26 +383,19 @@ WRK_SUCCESS=$(sed -n 's/^WRK_SUCCESS://p' "$WRK_OUT")
 [[ "$WRK_SUCCESS" -gt 0 ]] || fail "No successful responses were recorded under load."
 wait_for_endpoint
 
-echo
-echo "--- Load test completed. Allowing 5 seconds for in-flight requests and recovery ---"
-sleep 5
-
 # 4. Graceful orderly shutdown
 echo
 echo "--- Performing Orderly Shutdown of Topology ---"
 kill_app "Front App" "$PID_FRONT" "$GRACE_PERIOD"
 PID_FRONT=""
-sleep 2
 
 kill_app "Node 1" "$PID_NODE1" "$GRACE_PERIOD"
 PID_NODE1=""
 kill_app "Node 2" "$PID_NODE2" "$GRACE_PERIOD"
 PID_NODE2=""
-sleep 2
 
 kill_app "Database App" "$PID_DB" "$GRACE_PERIOD"
 PID_DB=""
-sleep 2
 
 # 5. Verification & Report
 echo
