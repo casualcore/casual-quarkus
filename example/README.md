@@ -116,6 +116,10 @@ See [`CallMetadataPropagationTest`](user-handlers/src/test/java/se/laz/casual/ex
 for the header extraction example. [`CallMetadataEndToEndTest`](example-app/src/test/java/se/laz/casual/example/CallMetadataEndToEndTest.java)
 passes the header through a real protocol 1.5 service call and verifies the value returned by the inbound service.
 
+The same test suite also shows how to populate the request-scoped bean from a CDI interceptor.
+Its `CallMetadataInterceptor` reads a header from the `InboundRequest`, calls `setBreadcrumb()` on its injected `CallMetadata`,
+and then calls `proceed()`. The service reads the value through its own injection point.
+
 From the `example` directory, run the end-to-end test with the following command:
 
 ```sh

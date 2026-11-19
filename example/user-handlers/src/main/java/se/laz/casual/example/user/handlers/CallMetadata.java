@@ -32,7 +32,13 @@ public class CallMetadata
         return Optional.ofNullable(breadcrumb);
     }
 
-    void setBreadcrumb(UUID breadcrumb)
+    /**
+     * Sets the breadcrumb for the current inbound call.
+     *
+     * @param breadcrumb the caller's breadcrumb
+     * @throws NullPointerException if the breadcrumb is null
+     */
+    public void setBreadcrumb(UUID breadcrumb)
     {
         this.breadcrumb = Objects.requireNonNull(breadcrumb, "breadcrumb can not be null");
     }
