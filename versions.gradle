@@ -4,6 +4,7 @@ def gson_version = '2.13.1'
 def casual_version = '3.8.0'
 def casual_caller_version = '3.5.0'
 def ironjacamar_version = '1.8.3'
+def jakarta_concurrency_version = '3.0.0'
 
 ext.quarkusPlatformBom = "io.quarkus.platform:quarkus-bom:${quarkus_version}"
 ext.quarkusVersion = quarkus_version
@@ -25,6 +26,7 @@ ext.libs = [
     casual_caller: "se.laz.casual:casual-caller:${casual_caller_version}",
     casual_caller_api: "se.laz.casual:casual-caller-api:${casual_caller_version}",
     casual_caller_http_client: "se.laz.casual:casual-caller-http-client:${casual_caller_version}",
+    jakarta_concurrency: "jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api:${jakarta_concurrency_version}",
     gson: "com.google.code.gson:gson:${gson_version}",
     commons_io: 'commons-io:commons-io:2.11.0',
     // for spock

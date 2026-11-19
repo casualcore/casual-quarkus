@@ -9,6 +9,7 @@ import io.quarkiverse.ironjacamar.ResourceAdapterFactory;
 import io.quarkiverse.ironjacamar.ResourceAdapterKind;
 import io.quarkiverse.ironjacamar.ResourceAdapterTypes;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.resource.ResourceException;
 import jakarta.resource.spi.ActivationSpec;
 import jakarta.resource.spi.ManagedConnectionFactory;
 import jakarta.resource.spi.ResourceAdapter;
@@ -17,6 +18,8 @@ import se.laz.casual.jca.CasualConnectionFactory;
 import se.laz.casual.jca.CasualManagedConnectionFactory;
 import se.laz.casual.jca.inflow.CasualActivationSpec;
 import se.laz.casual.jca.inflow.CasualMessageListener;
+import se.laz.casual.quarkus.validation.CasualQuarkusConfigurationValidator;
+import se.laz.casual.quarkus.validation.ValidatedConnectionFactoryConfiguration;
 
 import java.util.Map;
 
@@ -37,20 +40,20 @@ public class CasualQuarkusResourceAdapterFactory implements ResourceAdapterFacto
     }
 
     @Override
-    public ManagedConnectionFactory createManagedConnectionFactory(String id, ResourceAdapter adapter)
+    public ManagedConnectionFactory createManagedConnectionFactory(String id, ResourceAdapter adapter) throws ResourceException
     {
         CasualQuarkusResourceAdapter quarkusAdapter = (CasualQuarkusResourceAdapter) adapter;
-        CasualManagedConnectionFactory mcf = new CasualManagedConnectionFactory();
         Map<String, String> config = quarkusAdapter.getConfig();
-        mcf.setHostName(config.get("host"));
-        mcf.setPortNumber(Integer.parseInt(config.get("port")));
-        if (config.containsKey("network-connection-pool-size"))
+        ValidatedConnectionFactoryConfiguration configuration =
+                CasualQuarkusConfigurationValidator.validate(id, config);
+
+        CasualManagedConnectionFactory mcf = new CasualManagedConnectionFactory();
+        mcf.setHostName(configuration.host());
+        mcf.setPortNumber(configuration.port());
+        mcf.setNetworkConnectionPoolName(configuration.poolName());
+        if (configuration.poolSize() != null)
         {
-            mcf.setNetworkConnectionPoolSize(Integer.parseInt(config.get("network-connection-pool-size")));
-        }
-        if (config.containsKey("network-connection-pool-name"))
-        {
-            mcf.setNetworkConnectionPoolName(config.get("network-connection-pool-name"));
+            mcf.setNetworkConnectionPoolSize(configuration.poolSize());
         }
         mcf.setResourceAdapter(adapter);
         return mcf;
