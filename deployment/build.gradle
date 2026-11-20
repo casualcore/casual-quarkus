@@ -12,7 +12,9 @@ dependencies {
     implementation project(':casual-quarkus')
 
     testImplementation "io.quarkus:quarkus-junit-internal:${quarkusVersion}"
-    // ArC resolves the Jakarta executor type when it indexes casual-caller during QuarkusUnitTest startup.
+    // The extension uses its own QuarkusTopologyChangedHandler at runtime. During QuarkusUnitTest
+    // startup, ArC also indexes casual-caller's TopologyChangedHandlerImpl and resolves its
+    // ManagedScheduledExecutorService parameter.
     testRuntimeOnly libs.jakarta_concurrency
 
     annotationProcessor "io.quarkus:quarkus-extension-processor:${quarkusVersion}"
