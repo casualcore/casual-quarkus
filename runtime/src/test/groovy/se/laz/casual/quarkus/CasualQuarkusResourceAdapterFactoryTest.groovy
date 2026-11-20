@@ -5,30 +5,14 @@
  */
 package se.laz.casual.quarkus
 
-import se.laz.casual.config.ConfigurationOptions
-import se.laz.casual.config.ConfigurationService
-import se.laz.casual.config.ReverseOutbound
+import jakarta.resource.spi.InvalidPropertyException
 import se.laz.casual.jca.CasualManagedConnectionFactory
 import spock.lang.Specification
 
 class CasualQuarkusResourceAdapterFactoryTest extends Specification
 {
-    private static final String ADAPTER_ID = 'secondary'
+    private static final String ADAPTER_ID = 'casual'
     private final CasualQuarkusResourceAdapterFactory factory = new CasualQuarkusResourceAdapterFactory()
-    private List<ReverseOutbound> previousReverseOutbounds
-
-    def setup()
-    {
-        previousReverseOutbounds = ConfigurationService.getConfiguration(
-                ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES)
-        ConfigurationService.setConfiguration(ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES, [])
-    }
-
-    def cleanup()
-    {
-        ConfigurationService.setConfiguration(
-                ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES, previousReverseOutbounds)
-    }
 
     def 'validated configuration is applied to managed connection factory'()
     {
@@ -50,5 +34,22 @@ class CasualQuarkusResourceAdapterFactoryTest extends Specification
         result.networkConnectionPoolName == 'casual-pool'
         result.networkConnectionPoolSize == 1
         result.resourceAdapter.is(adapter)
+    }
+
+    def 'managed connection factory creation rejects an adapter with a missing pool name'()
+    {
+        given:
+        def adapter = factory.createResourceAdapter(ADAPTER_ID, [
+                'host'                        : 'localhost',
+                'port'                        : '7771',
+                'network-connection-pool-size': '1'
+        ])
+
+        when:
+        factory.createManagedConnectionFactory(ADAPTER_ID, adapter)
+
+        then:
+        InvalidPropertyException exception = thrown()
+        exception.message.contains("quarkus.ironjacamar.${ADAPTER_ID}.ra.config.network-connection-pool-name")
     }
 }
