@@ -52,7 +52,7 @@ Services are discovered at **build time** via Jandex and registered during runti
 In `application.properties`:
 
 ```properties
-# Name one Casual adapter "casual" for inbound. Give each additional Casual adapter its own unique name.
+# one Casual adapter has to be name casual. Give each additional adapter its own unique name.
 quarkus.ironjacamar.casual.ra.kind=casual
 quarkus.ironjacamar.casual.ra.config.host=my-casual-host
 quarkus.ironjacamar.casual.ra.config.port=7771
