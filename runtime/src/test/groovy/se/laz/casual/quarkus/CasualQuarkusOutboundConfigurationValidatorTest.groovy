@@ -5,14 +5,15 @@
  */
 package se.laz.casual.quarkus
 
+import io.quarkiverse.ironjacamar.Defaults
 import jakarta.resource.spi.InvalidPropertyException
 import se.laz.casual.config.ConfigurationOptions
 import se.laz.casual.config.ConfigurationService
 import se.laz.casual.config.ReverseOutbound
-import se.laz.casual.quarkus.validation.CasualQuarkusConfigurationValidator
+import se.laz.casual.quarkus.validation.CasualQuarkusOutboundConfigurationValidator
 import spock.lang.Specification
 
-class CasualQuarkusConfigurationValidatorTest extends Specification
+class CasualQuarkusOutboundConfigurationValidatorTest extends Specification
 {
     private static final String ADAPTER_ID = 'secondary'
     private static final String HOST = 'host'
@@ -22,40 +23,44 @@ class CasualQuarkusConfigurationValidatorTest extends Specification
 
     private List<ReverseOutbound> previousReverseOutbounds
 
-    def setup()
+    def 'rejects a Casual adapter without an explicit name: #id'()
     {
-        previousReverseOutbounds = ConfigurationService.getConfiguration(
-                ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES)
-        ConfigurationService.setConfiguration(ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES, [])
+        when:
+        CasualQuarkusOutboundConfigurationValidator.validate(id, normalConfiguration())
+
+        then:
+        InvalidPropertyException exception = thrown()
+        exception.message.contains('requires an explicit name')
+
+        where:
+        id << [null, '', ' ', Defaults.DEFAULT_RESOURCE_ADAPTER_NAME]
     }
 
-    def cleanup()
-    {
-        ConfigurationService.setConfiguration(
-                ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES, previousReverseOutbounds)
-    }
-
-    def 'normal outbound configuration is validated and converted'()
+    def 'normal outbound configuration is validated and converted: #id'()
     {
         given:
         def config = normalConfiguration()
 
         when:
-        def result = CasualQuarkusConfigurationValidator.validate(ADAPTER_ID, config)
+        def result = CasualQuarkusOutboundConfigurationValidator.validate(id, config)
 
         then:
         result.host() == config[HOST]
         result.port() == Integer.parseInt(config[PORT])
         result.poolName() == config[POOL_NAME]
         result.poolSize() == Integer.parseInt(config[POOL_SIZE])
+
+        where:
+        id << ['casual', ADAPTER_ID]
     }
 
     def 'reverse outbound configuration does not require pool size: #size'()
     {
         given:
         String reversePoolName = 'reverse-pool'
+        int port = 7785
         ConfigurationService.setConfiguration(ConfigurationOptions.CASUAL_REVERSE_OUTBOUND_INSTANCES,
-                [ReverseOutbound.newBuilder().withName(reversePoolName).withPort(7785).build()])
+                [ReverseOutbound.newBuilder().withName(reversePoolName).withPort(port).build()])
         def config = normalConfiguration()
         config[POOL_NAME] = reversePoolName
         if (size == null)
@@ -68,7 +73,7 @@ class CasualQuarkusConfigurationValidatorTest extends Specification
         }
 
         when:
-        def result = CasualQuarkusConfigurationValidator.validate(ADAPTER_ID, config)
+        def result = CasualQuarkusOutboundConfigurationValidator.validate(ADAPTER_ID, config)
 
         then:
         result.poolName() == reversePoolName
@@ -96,7 +101,7 @@ class CasualQuarkusConfigurationValidatorTest extends Specification
         }
 
         when:
-        CasualQuarkusConfigurationValidator.validate(ADAPTER_ID, config)
+        CasualQuarkusOutboundConfigurationValidator.validate(ADAPTER_ID, config)
 
         then:
         InvalidPropertyException exception = thrown()
@@ -122,7 +127,7 @@ class CasualQuarkusConfigurationValidatorTest extends Specification
         config[key] = value
 
         when:
-        CasualQuarkusConfigurationValidator.validate(ADAPTER_ID, config)
+        CasualQuarkusOutboundConfigurationValidator.validate(ADAPTER_ID, config)
 
         then:
         InvalidPropertyException exception = thrown()
@@ -143,7 +148,7 @@ class CasualQuarkusConfigurationValidatorTest extends Specification
         config[POOL_SIZE] = size
 
         when:
-        CasualQuarkusConfigurationValidator.validate(ADAPTER_ID, config)
+        CasualQuarkusOutboundConfigurationValidator.validate(ADAPTER_ID, config)
 
         then:
         InvalidPropertyException exception = thrown()

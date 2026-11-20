@@ -52,7 +52,9 @@ class CasualQuarkusServiceHandlerRequestContextTest
 
     @RegisterExtension
     static final QuarkusUnitTest UNIT_TEST = new QuarkusUnitTest()
-            .overrideConfigKey("quarkus.arc.exclude-types", CasualShutdownDelayHandler.class.getName())
+            // This fixture invokes the handler directly and does not deploy a resource adapter.
+            .overrideConfigKey("quarkus.arc.exclude-types", CasualShutdownDelayHandler.class.getName()
+                    + ",se.laz.casual.quarkus.validation.CasualResourceAdapterNameValidator")
             .overrideConfigKey("quarkus.log.category.\"se.laz.casual.quarkus.CasualQuarkusServiceHandler\".level",
                     "OFF")
             .setArchiveProducer(() -> ShrinkWrap.create(JavaArchive.class)

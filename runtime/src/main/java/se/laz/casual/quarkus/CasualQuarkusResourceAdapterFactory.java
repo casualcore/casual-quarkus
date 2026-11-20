@@ -18,7 +18,7 @@ import se.laz.casual.jca.CasualConnectionFactory;
 import se.laz.casual.jca.CasualManagedConnectionFactory;
 import se.laz.casual.jca.inflow.CasualActivationSpec;
 import se.laz.casual.jca.inflow.CasualMessageListener;
-import se.laz.casual.quarkus.validation.CasualQuarkusConfigurationValidator;
+import se.laz.casual.quarkus.validation.CasualQuarkusOutboundConfigurationValidator;
 import se.laz.casual.quarkus.validation.ValidatedConnectionFactoryConfiguration;
 
 import java.util.Map;
@@ -45,7 +45,7 @@ public class CasualQuarkusResourceAdapterFactory implements ResourceAdapterFacto
         CasualQuarkusResourceAdapter quarkusAdapter = (CasualQuarkusResourceAdapter) adapter;
         Map<String, String> config = quarkusAdapter.getConfig();
         ValidatedConnectionFactoryConfiguration configuration =
-                CasualQuarkusConfigurationValidator.validate(id, config);
+                CasualQuarkusOutboundConfigurationValidator.validate(id, config);
 
         CasualManagedConnectionFactory mcf = new CasualManagedConnectionFactory();
         mcf.setHostName(configuration.host());

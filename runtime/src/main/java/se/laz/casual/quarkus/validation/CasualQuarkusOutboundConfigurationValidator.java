@@ -17,30 +17,32 @@ import java.util.Map;
  *
  * <p>This class is stateless and thread-safe.</p>
  */
-public final class CasualQuarkusConfigurationValidator
+public final class CasualQuarkusOutboundConfigurationValidator
 {
-    private static final String CONFIGURATION_PREFIX = "quarkus.ironjacamar.";
-    private static final String CONFIGURATION_SUFFIX = "ra.config.";
     private static final String HOST = "host";
     private static final String PORT = "port";
     private static final String NETWORK_CONNECTION_POOL_NAME = "network-connection-pool-name";
     private static final String NETWORK_CONNECTION_POOL_SIZE = "network-connection-pool-size";
 
-    private CasualQuarkusConfigurationValidator()
-    {
-    }
+    private CasualQuarkusOutboundConfigurationValidator()
+    {}
 
     /**
      * Validates and converts configuration for a Casual managed connection factory.
      *
-     * @param id resource-adapter identifier
+     * @param id explicit resource-adapter name
      * @param config effective resource-adapter configuration
      * @return validated managed connection factory configuration
-     * @throws InvalidPropertyException if a required property is missing or a property value is invalid
+     * @throws InvalidPropertyException if the adapter has no explicit name or a property is missing or invalid
      */
     public static ValidatedConnectionFactoryConfiguration validate(String id, Map<String, String> config)
             throws InvalidPropertyException
     {
+        if (id == null || id.isBlank() || Defaults.DEFAULT_RESOURCE_ADAPTER_NAME.equals(id))
+        {
+            throw new InvalidPropertyException("Each Casual resource adapter requires an explicit name. "
+                    + "Use quarkus.ironjacamar.<name>.ra.kind=casual.");
+        }
         String host = requiredValue(id, config, HOST);
         int port = requiredInteger(id, config, PORT);
         String poolName = requiredValue(id, config, NETWORK_CONNECTION_POOL_NAME);
@@ -123,8 +125,7 @@ public final class CasualQuarkusConfigurationValidator
 
     private static String invalidPropertyMessage(String id, String key, String problem)
     {
-        String adapterPrefix = Defaults.DEFAULT_RESOURCE_ADAPTER_NAME.equals(id) ? "" : id + ".";
-        String property = CONFIGURATION_PREFIX + adapterPrefix + CONFIGURATION_SUFFIX + key;
+        String property = "quarkus.ironjacamar." + id + ".ra.config." + key;
         return "Invalid Casual resource adapter '" + id + "': property '" + property + "' " + problem;
     }
 
