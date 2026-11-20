@@ -21,8 +21,6 @@ class CasualQuarkusOutboundConfigurationValidatorTest extends Specification
     private static final String POOL_NAME = 'network-connection-pool-name'
     private static final String POOL_SIZE = 'network-connection-pool-size'
 
-    private List<ReverseOutbound> previousReverseOutbounds
-
     def 'rejects a Casual adapter without an explicit name: #id'()
     {
         when:
