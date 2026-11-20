@@ -37,7 +37,6 @@ dependencies {
     implementation libs.casual_internal
     implementation libs.casual_api_spi_impl
     implementation libs.casual_caller
-    implementation libs.jakarta_concurrency
 
     implementation 'io.quarkus:quarkus-scheduler'
     
